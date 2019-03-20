@@ -167,7 +167,7 @@ Task("Default")
    .IsDependentOn("Publish")
    .Does(() =>
    {
-      Information("Larva build complete!");
+      Information("FluentSocket build complete!");
    });
 
 RunTarget(parameters.Target);

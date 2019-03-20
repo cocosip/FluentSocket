@@ -28,8 +28,11 @@ fi
 
 # Define default arguments.
 SCRIPT="build.cake"
-CAKE_ARGUMENTS=()
-
+TARGET="Publish"
+CONFIGURATION="Release"
+VERBOSITY="verbose"
+DRYRUN=
+CAKE_ARGUMENTS()
 # Parse arguments.
 for i in "$@"; do
     case $1 in

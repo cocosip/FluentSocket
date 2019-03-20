@@ -33,7 +33,7 @@ CAKE_ARGUMENTS=()
 # Parse arguments.
 for i in "$@"; do
     case $1 in
-        -s|--script) SCRIPT="$2"; shift ;;
+        #-s|--script) SCRIPT="$2"; shift ;;
         -t|--target) TARGET="$2"; shift ;;
         -c|--configuration) CONFIGURATION="$2"; shift ;;
         -v|--verbosity) VERBOSITY="$2"; shift ;;

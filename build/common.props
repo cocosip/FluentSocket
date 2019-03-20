@@ -1,0 +1,18 @@
+<Project>
+  <Import Project="version.props" />
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Authors>virtual</Authors>
+    <Product>FluentSocket</Product>
+    <PackageIconUrl>https://github.com/cocosip/FluentSocket</PackageIconUrl>
+    <PackageProjectUrl>https://github.com/cocosip/FluentSocket</PackageProjectUrl>
+    <PackageLicense>https://github.com/cocosip/FluentSocket/blob/master/LICENSE</PackageLicense>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/cocosip/FluentSocket</RepositoryUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SourceLink.Create.CommandLine" Version="2.8.3" PrivateAssets="All" />
+  </ItemGroup>
+
+</Project>

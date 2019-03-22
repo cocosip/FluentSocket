@@ -116,7 +116,7 @@ namespace FluentSocket
                             pipeline.AddLast(new IdleStateHandler(_setting.ReaderIdleTimeSeconds, _setting.WriterIdleTimeSeconds, _setting.AllIdleTimeSeconds));
                         }
                         //Server channel manager
-                        pipeline.AddLast("channel-manager", _provider.CreateInstance<ServerChannelManagerHandler>());
+                        pipeline.AddLast("channel-manager", _provider.CreateInstance<ServerChannelManagerHandler>(_channelManager));
                         //RemotingMessage coder and encoder
                         pipeline.AddLast(new MessageDecoder(), new MessageEncoder());
                         //Hearbeat sender

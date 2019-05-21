@@ -139,12 +139,11 @@ namespace FluentSocket
                 _boundChannel = await bootstrap.BindAsync(_setting.ListeningEndPoint);
 
                 _logger.LogInformation($"Server Run! name:{Name}, listeningEndPoint:{_setting.ListeningEndPoint}, boundChannel:{_boundChannel.Id.AsShortText()}");
-
-                StartScanTimeoutPushMessageTask();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex.Message);
+                StartScanTimeoutPushMessageTask();
                 await Task.WhenAll(
                     _bossGroup.ShutdownGracefullyAsync(TimeSpan.FromMilliseconds(_setting.QuietPeriodMilliSeconds), TimeSpan.FromSeconds(_setting.CloseTimeoutSeconds)),
                     _workerGroup.ShutdownGracefullyAsync(TimeSpan.FromMilliseconds(_setting.QuietPeriodMilliSeconds), TimeSpan.FromSeconds(_setting.CloseTimeoutSeconds)));
@@ -163,10 +162,10 @@ namespace FluentSocket
             try
             {
                 await _boundChannel.CloseAsync();
-                StopScanTimeoutPushMessageTask();
             }
             finally
             {
+                StopScanTimeoutPushMessageTask();
                 await Task.WhenAll(
                     _bossGroup.ShutdownGracefullyAsync(TimeSpan.FromMilliseconds(_setting.QuietPeriodMilliSeconds), TimeSpan.FromSeconds(_setting.CloseTimeoutSeconds)),
                     _workerGroup.ShutdownGracefullyAsync(TimeSpan.FromMilliseconds(_setting.QuietPeriodMilliSeconds), TimeSpan.FromSeconds(_setting.CloseTimeoutSeconds)));

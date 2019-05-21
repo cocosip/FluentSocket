@@ -144,6 +144,7 @@ namespace FluentSocket
             catch (Exception ex)
             {
                 _logger.LogError(ex.Message);
+                StopScanTimeoutRequestTask();
                 await _group.ShutdownGracefullyAsync(TimeSpan.FromMilliseconds(_setting.QuietPeriodMilliSeconds), TimeSpan.FromSeconds(_setting.CloseTimeoutSeconds));
             }
 
@@ -160,10 +161,10 @@ namespace FluentSocket
             try
             {
                 await _clientChannel.CloseAsync();
-                StopScanTimeoutRequestTask();
             }
             finally
             {
+                StopScanTimeoutRequestTask();
                 await _group.ShutdownGracefullyAsync(TimeSpan.FromMilliseconds(_setting.QuietPeriodMilliSeconds), TimeSpan.FromSeconds(_setting.CloseTimeoutSeconds));
             }
         }

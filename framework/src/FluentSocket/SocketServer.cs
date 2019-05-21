@@ -72,8 +72,8 @@ namespace FluentSocket
             }
             else
             {
-                _bossGroup = new MultithreadEventLoopGroup(1);
-                _workerGroup = new MultithreadEventLoopGroup();
+                _bossGroup = new MultithreadEventLoopGroup(_setting.BossGroupEventLoopCount);
+                _workerGroup = new MultithreadEventLoopGroup(_setting.WorkGroupEventLoopCount);
             }
 
             try
@@ -179,24 +179,19 @@ namespace FluentSocket
         {
             var channel = _channelManager.FindFirstChannel(predicate);
             CheckChannel(channel);
-            if (channel.IsWritable)
+            while (!channel.IsWritable)
             {
-                var taskCompletionSource = new TaskCompletionSource<PushResponseMessage>();
-                var pushResponseFuture = new PushResponseFuture(pushMessage, timeoutMillis, taskCompletionSource);
+                Thread.Sleep(50);
+            }
+            var taskCompletionSource = new TaskCompletionSource<PushResponseMessage>();
+            var pushResponseFuture = new PushResponseFuture(pushMessage, timeoutMillis, taskCompletionSource);
 
-                if (!_pushResponseFutureDict.TryAdd(pushMessage.Id, pushResponseFuture))
-                {
-                    throw new Exception($"Add remoting push response future failed. push message id:{pushMessage.Id}");
-                }
-                channel.WriteAndFlushAsync(pushMessage).Wait();
-                return taskCompletionSource.Task;
-            }
-            else
+            if (!_pushResponseFutureDict.TryAdd(pushMessage.Id, pushResponseFuture))
             {
-                _logger.LogInformation("Channel is not writable!");
-                Thread.Sleep(1000);
-                return Task.FromResult(PushResponseMessage.BuildExceptionPushResponse(pushMessage, "Channel is not writable"));
+                throw new Exception($"Add remoting push response future failed. push message id:{pushMessage.Id}");
             }
+            channel.WriteAndFlushAsync(pushMessage).Wait();
+            return taskCompletionSource.Task;
         }
 
         /// <summary>Push message to multiple client

@@ -40,6 +40,7 @@ namespace FluentSocket
         }
         private IEventLoopGroup _group;
         private IChannel _clientChannel;
+
         private readonly Dictionary<int, IPushMessageHandler> _pushMessageHandlerDict;
         private readonly ConcurrentDictionary<string, ResponseFuture> _responseFutureDict;
 
@@ -72,7 +73,7 @@ namespace FluentSocket
             }
             else
             {
-                _group = new MultithreadEventLoopGroup();
+                _group = new MultithreadEventLoopGroup(_setting.GroupEventLoopCount);
             }
 
             try
@@ -173,24 +174,19 @@ namespace FluentSocket
         public Task<ResponseMessage> SendAsync(RequestMessage request, int timeoutMillis)
         {
             CheckChannel(_clientChannel);
-            if (_clientChannel.IsWritable)
+            while (!_clientChannel.IsWritable)
             {
-                var taskCompletionSource = new TaskCompletionSource<ResponseMessage>();
-                var responseFuture = new ResponseFuture(request, timeoutMillis, taskCompletionSource);
+                Thread.Sleep(10);
+            }
+            var taskCompletionSource = new TaskCompletionSource<ResponseMessage>();
+            var responseFuture = new ResponseFuture(request, timeoutMillis, taskCompletionSource);
 
-                if (!_responseFutureDict.TryAdd(request.Id, responseFuture))
-                {
-                    throw new Exception($"Add remoting request response future failed. request id:{request.Id}");
-                }
-                _clientChannel.WriteAndFlushAsync(request).Wait();
-                return taskCompletionSource.Task;
-            }
-            else
+            if (!_responseFutureDict.TryAdd(request.Id, responseFuture))
             {
-                _logger.LogInformation("Channel is not writable!");
-                Thread.Sleep(1000);
-                return Task.FromResult(ResponseMessage.BuildExceptionResponse(request, "Channel is not writable"));
+                throw new Exception($"Add remoting request response future failed. request id:{request.Id}");
             }
+            _clientChannel.WriteAndFlushAsync(request).Wait();
+            return taskCompletionSource.Task;
         }
 
 

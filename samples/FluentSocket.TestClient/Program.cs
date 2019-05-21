@@ -40,40 +40,46 @@ namespace FluentSocket.TestClient
             var index = 0;
             var sendBytes = new byte[1024];
             //Encoding.UTF8.GetBytes("Hello,I'm client!");
-            Task.Factory.StartNew(() =>
-            {
-                while (index < _messageCount)
-                {
-                    try
-                    {
-                        var request = new RequestMessage(100, sendBytes);
-                        _client.SendAsync(request, 10000).ContinueWith(t =>
-                        {
-                            if (t.Exception != null)
-                            {
-                                _logger.LogError(t.Exception, t.Exception.Message);
-                                return;
-                            }
-                            var response = t.Result;
-                            //_logger.LogInformation("接收服务器端返回:{0}" + Encoding.UTF8.GetString(response.Body));
-                            if (response.ResponseCode != (int)ResponseCodes.HasException)
-                            {
-                                _performanceService.IncrementKeyCount(_mode, (DateTime.Now - response.RequestTime).TotalMilliseconds);
-                            }
-                            else
-                            {
-                                _logger.LogInformation("ResponseException,ResponseCode:{0}", response.ResponseCode);
-                            }
-                        });
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError("Send remotingRequest failed, errorMsg:{0}", ex.Message);
-                    }
 
-                    Interlocked.Increment(ref index);
-                }
-            });
+            for (var i = 0; i < 3; i++)
+            {
+                Task.Factory.StartNew(() =>
+                {
+                    while (index < _messageCount)
+                    {
+                        try
+                        {
+                            var request = new RequestMessage(100, sendBytes);
+                            _client.SendAsync(request, 10000).ContinueWith(t =>
+                            {
+                                if (t.Exception != null)
+                                {
+                                    _logger.LogError(t.Exception, t.Exception.Message);
+                                    return;
+                                }
+                                var response = t.Result;
+                                //_logger.LogInformation("接收服务器端返回:{0}" + Encoding.UTF8.GetString(response.Body));
+                                if (response.ResponseCode != (int)ResponseCodes.HasException)
+                                {
+                                    _performanceService.IncrementKeyCount(_mode, (DateTime.Now - response.RequestTime).TotalMilliseconds);
+                                }
+                                else
+                                {
+                                    _logger.LogInformation("ResponseException,ResponseCode:{0}", response.ResponseCode);
+                                }
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError("Send remotingRequest failed, errorMsg:{0}", ex.Message);
+                        }
+
+                        Interlocked.Increment(ref index);
+                    }
+                });
+
+            }
+
 
         }
 
@@ -100,7 +106,8 @@ namespace FluentSocket.TestClient
                 IsSsl = false,
                 UseLibuv = false,
                 EnableHeartbeat = false,
-                ServerEndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 21000)
+                ServerEndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 21000),
+                //GroupEventLoopCount = 2
             };
 
             _client = provider.CreateClient(setting);

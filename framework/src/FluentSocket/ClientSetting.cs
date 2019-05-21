@@ -7,6 +7,10 @@ namespace FluentSocket
 {
     public class ClientSetting : AbstractSetting
     {
+        /// <summary>Group循环数
+        /// </summary>
+        public int GroupEventLoopCount { get; set; } = 1;
+
         /// <summary>Server ip address and port
         /// </summary>
         public IPEndPoint ServerEndPoint { get; set; }

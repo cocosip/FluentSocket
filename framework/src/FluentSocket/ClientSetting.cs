@@ -19,6 +19,25 @@ namespace FluentSocket
         /// </summary>
         public IPEndPoint LocalEndPoint { get; set; }
 
+        /// <summary>Keep alive
+        /// </summary>
+        public bool SoKeepalive { get; set; } = false;
+
+        /// <summary>Enable client to reConnect the server
+        /// </summary>
+        public bool EnableReConnect { get; set; } = false;
+
+        /// <summary>ReConnect delay seconds (s)
+        /// </summary>
+        public int ReConnectDelaySeconds { get; set; } = 2;
+
+        /// <summary>ReConnect interval
+        /// </summary>
+        public int ReConnectIntervalMilliSeconds { get; set; } = 1000;
+
+        /// <summary>Try reConnect max count
+        /// </summary>
+        public int ReConnectMaxCount { get; set; } = 10;
 
         /// <summary>PushHandler configure
         /// </summary>

@@ -106,6 +106,8 @@ namespace FluentSocket.TestClient
                 IsSsl = false,
                 UseLibuv = false,
                 EnableHeartbeat = false,
+                EnableReConnect = true,
+                ReConnectDelaySeconds = 3,
                 ServerEndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 21000),
                 //GroupEventLoopCount = 2
             };

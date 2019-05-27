@@ -28,6 +28,7 @@ namespace FluentSocket
         private readonly ILogger _logger;
         private readonly IScheduleService _scheduleService;
 
+
         private readonly ClientSetting _setting;
         public string Name { get; }
         public string ServerIPAddress { get; }
@@ -40,7 +41,9 @@ namespace FluentSocket
         }
         private IEventLoopGroup _group;
         private IChannel _clientChannel;
-
+        private Bootstrap _bootStrap;
+        private int _reConnectAttempt = 0;
+        private readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
         private readonly Dictionary<int, IPushMessageHandler> _pushMessageHandlerDict;
         private readonly ConcurrentDictionary<string, ResponseFuture> _responseFutureDict;
 
@@ -78,19 +81,20 @@ namespace FluentSocket
 
             try
             {
-                var bootstrap = new Bootstrap();
-                bootstrap.Group(_group);
+                _bootStrap = new Bootstrap();
+                _bootStrap.Group(_group);
                 if (_setting.UseLibuv)
                 {
-                    bootstrap.Channel<TcpChannel>();
+                    _bootStrap.Channel<TcpChannel>();
                 }
                 else
                 {
-                    bootstrap.Channel<TcpSocketChannel>();
+                    _bootStrap.Channel<TcpSocketChannel>();
                 }
 
-                bootstrap
+                _bootStrap
                     .Option(ChannelOption.TcpNodelay, _setting.TcpNodelay)
+                    .Option(ChannelOption.SoKeepalive, _setting.SoKeepalive)
                     .Option(ChannelOption.WriteBufferHighWaterMark, _setting.WriteBufferHighWaterMark)
                     .Option(ChannelOption.WriteBufferLowWaterMark, _setting.WriteBufferHighWaterMark)
                     .Option(ChannelOption.SoRcvbuf, _setting.SoRcvbuf)
@@ -130,13 +134,18 @@ namespace FluentSocket
                         //PushMessage Code Handler
                         AddPushMessageHandler(pipeline);
 
+                        if (_setting.EnableReConnect)
+                        {
+                            //Reconnect to server
+                            pipeline.AddLast("reconnect", _provider.CreateInstance<ReConnectHandler>(_setting, new Func<Task>(DoConnectIfNeed)));
+                        }
                         _setting.PipelineConfigure?.Invoke(pipeline);
 
                     }));
 
-                _clientChannel = _setting.LocalEndPoint == null ? await bootstrap.ConnectAsync(_setting.ServerEndPoint) : await bootstrap.ConnectAsync(_setting.ServerEndPoint, _setting.LocalEndPoint);
+                //Connect
+                await DoConnect();
 
-                _logger.LogInformation($"Client Run! name:{Name},serverEndPoint:{_clientChannel.RemoteAddress.ToStringAddress()},localAddress:{_clientChannel.LocalAddress.ToStringAddress()}");
                 //Scan timeout request
                 StartScanTimeoutRequestTask();
 
@@ -147,8 +156,9 @@ namespace FluentSocket
                 StopScanTimeoutRequestTask();
                 await _group.ShutdownGracefullyAsync(TimeSpan.FromMilliseconds(_setting.QuietPeriodMilliSeconds), TimeSpan.FromSeconds(_setting.CloseTimeoutSeconds));
             }
-
         }
+
+
 
         /// <summary>Close
         /// </summary>
@@ -166,6 +176,48 @@ namespace FluentSocket
             {
                 StopScanTimeoutRequestTask();
                 await _group.ShutdownGracefullyAsync(TimeSpan.FromMilliseconds(_setting.QuietPeriodMilliSeconds), TimeSpan.FromSeconds(_setting.CloseTimeoutSeconds));
+            }
+        }
+
+        private async Task DoConnect()
+        {
+            _clientChannel = _setting.LocalEndPoint == null ? await _bootStrap.ConnectAsync(_setting.ServerEndPoint) : await _bootStrap.ConnectAsync(_setting.ServerEndPoint, _setting.LocalEndPoint);
+            _logger.LogInformation($"Client DoConnect! name:{Name},serverEndPoint:{_clientChannel.RemoteAddress.ToStringAddress()},localAddress:{_clientChannel.LocalAddress.ToStringAddress()}");
+        }
+
+
+        private async Task DoConnectIfNeed()
+        {
+            if (!_setting.EnableReConnect || _setting.ReConnectMaxCount < _reConnectAttempt)
+            {
+                return;
+            }
+            if (_clientChannel != null && !_clientChannel.Active)
+            {
+                await _semaphoreSlim.WaitAsync();
+                bool reConnectSuccess = false;
+                try
+                {
+                    _logger.LogInformation($"Try to reconnect server!");
+                    await DoConnect();
+                    Interlocked.Exchange(ref _reConnectAttempt, 0);
+                    reConnectSuccess = true;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError("ReConnect fail!{0}", ex.Message);
+                }
+                finally
+                {
+                    Interlocked.Increment(ref _reConnectAttempt);
+                    _semaphoreSlim.Release();
+                }
+                //Try again!
+                if (_reConnectAttempt < _setting.ReConnectMaxCount && !reConnectSuccess)
+                {
+                    Thread.Sleep(_setting.ReConnectIntervalMilliSeconds);
+                    await DoConnectIfNeed();
+                }
             }
         }
 

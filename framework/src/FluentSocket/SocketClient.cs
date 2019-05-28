@@ -32,16 +32,13 @@ namespace FluentSocket
         private readonly ClientSetting _setting;
         public string Name { get; }
         public string ServerIPAddress { get; }
-        public string LocalIPAddress
-        {
-            get
-            {
-                return _clientChannel?.LocalAddress.ToStringAddress() ?? "";
-            }
-        }
+        public bool IsRunning { get { return _isRunning; } }
+        public string LocalIPAddress { get { return _clientChannel?.LocalAddress.ToStringAddress() ?? ""; } }
         private IEventLoopGroup _group;
         private IChannel _clientChannel;
         private Bootstrap _bootStrap;
+
+        private bool _isRunning = false;
         private int _reConnectAttempt = 0;
         private readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
         private readonly Dictionary<int, IPushMessageHandler> _pushMessageHandlerDict;
@@ -145,7 +142,7 @@ namespace FluentSocket
 
                 //Connect
                 await DoConnect();
-
+                _isRunning = true;
                 //Scan timeout request
                 StartScanTimeoutRequestTask();
 
@@ -170,6 +167,7 @@ namespace FluentSocket
             }
             try
             {
+                _isRunning = false;
                 await _clientChannel.CloseAsync();
             }
             finally

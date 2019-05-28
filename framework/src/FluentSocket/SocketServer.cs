@@ -32,9 +32,11 @@ namespace FluentSocket
 
         public string Name { get; }
         public string LocalIPAddress { get; }
+        public bool IsRunning { get { return _isRunning; } }
         private IEventLoopGroup _bossGroup = null;
         private IEventLoopGroup _workerGroup = null;
         private IChannel _boundChannel;
+        private bool _isRunning = false;
         private readonly IDictionary<int, IRequestMessageHandler> _requestMessageHandlerDict;
         private readonly ConcurrentDictionary<string, PushResponseFuture> _pushResponseFutureDict;
 
@@ -135,7 +137,7 @@ namespace FluentSocket
                         _setting.PipelineConfigure?.Invoke(pipeline);
 
                     }));
-
+                _isRunning = true;
                 _boundChannel = await bootstrap.BindAsync(_setting.ListeningEndPoint);
                 StartScanTimeoutPushMessageTask();
                 _logger.LogInformation($"Server Run! name:{Name}, listeningEndPoint:{_setting.ListeningEndPoint}, boundChannel:{_boundChannel.Id.AsShortText()}");
@@ -165,6 +167,7 @@ namespace FluentSocket
             }
             finally
             {
+                _isRunning = false;
                 StopScanTimeoutPushMessageTask();
                 await Task.WhenAll(
                     _bossGroup.ShutdownGracefullyAsync(TimeSpan.FromMilliseconds(_setting.QuietPeriodMilliSeconds), TimeSpan.FromSeconds(_setting.CloseTimeoutSeconds)),

@@ -4,6 +4,25 @@ branches:
   only:
     - master
     - dev
-image: Visual Studio 2017
-build_script:
-- ps: ./build.ps1
+image: 
+  - Visual Studio 2019
+  - Ubuntu
+
+for:
+-
+  matrix:
+    only:
+      - image: Ubuntu
+
+  build_script:
+  - ./build.sh
+
+for:
+-
+  matrix:
+    only:
+      - image: Visual Studio 2019
+
+  build_script:
+  - ./build.ps1
+ 

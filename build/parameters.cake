@@ -39,7 +39,7 @@ public class BuildParameters
     {
         get
         {
-            return !IsLocalBuild && !IsPullRequest && IsTagged && (IsRunningOnTravisCI || (IsRunningOnAppVeyor && IsMasterBranch));
+            return !IsLocalBuild && !IsPullRequest && IsTagged && (IsRunningOnTravisCI || (IsRunningOnAppVeyor && IsMasterBranch)&&IsRunningOnUnix);
         }
     }
 
@@ -47,7 +47,7 @@ public class BuildParameters
     {
         get
         {
-            return !IsLocalBuild && !IsPullRequest && IsTagged && (IsRunningOnTravisCI || (IsRunningOnAppVeyor && IsMasterBranch));
+            return !IsLocalBuild && !IsPullRequest && IsTagged && (IsRunningOnTravisCI || (IsRunningOnAppVeyor && IsMasterBranch)&&IsRunningOnUnix);
         }
     }
 
@@ -113,6 +113,7 @@ public class BuildParameters
             IsRunningOnUnix = context.IsRunningOnUnix(),
             IsRunningOnWindows = context.IsRunningOnWindows(),
             IsRunningOnTravisCI = buildSystem.TravisCI.IsRunningOnTravisCI,
+            IsRunningOnAppVeyor =  buildSystem.AppVeyor.IsRunningOnAppVeyor,
             IsPullRequest = IsThePullRequest(buildSystem),
             IsMasterBranch = IsTheMasterBranch(buildSystem),
             IsDevelopBranch = IsTheDevelopBranch(buildSystem),

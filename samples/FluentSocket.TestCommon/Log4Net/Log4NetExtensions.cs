@@ -21,6 +21,7 @@ namespace FluentSocket.TestCommon.Log4Net
             return factory;
         }
 
+#if NETSTANDARD2_0
 
         public static ILoggingBuilder AddLog4Net(this ILoggingBuilder builder)
         {
@@ -39,7 +40,7 @@ namespace FluentSocket.TestCommon.Log4Net
             builder.Services.AddSingleton<ILoggerProvider>(new Log4NetProvider(options));
             return builder;
         }
-
+#endif
 
     }
 }

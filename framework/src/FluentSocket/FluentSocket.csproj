@@ -1,8 +1,8 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 <Import Project="..\..\..\build\common.props" />
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFrameworks>netstandard2.0;net45</TargetFrameworks>
     <AssemblyName>FluentSocket</AssemblyName>
     <PackageId>FluentSocket</PackageId>
      <RootNamespace>FluentSocket</RootNamespace>

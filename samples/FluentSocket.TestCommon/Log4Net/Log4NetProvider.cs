@@ -27,7 +27,12 @@ namespace FluentSocket.TestCommon.Log4Net
             var file = new FileInfo(options.Log4NetConfigFile);
             if (!file.Exists)
             {
+#if NET45
+                file = new FileInfo(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, options.Log4NetConfigFile));
+
+#elif NETSTANDARD2_0
                 file = new FileInfo(Path.Combine(AppContext.BaseDirectory, options.Log4NetConfigFile));
+#endif
             }
             if (file.Exists)
             {

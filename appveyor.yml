@@ -5,3 +5,5 @@ branches:
     - master
     - dev
 image: Visual Studio 2017
+build_script:
+- ps: ./build.ps1

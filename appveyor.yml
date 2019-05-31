@@ -1,0 +1,7 @@
+version: '{build}'
+branches:
+  # whitelist
+  only:
+    - master
+    - dev
+image: Visual Studio 2017

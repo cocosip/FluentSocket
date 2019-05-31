@@ -6,8 +6,6 @@ branches:
     - dev
 image: 
   - Visual Studio 2019
-  - Ubuntu
 
 build_script:
 - ps: ./build.ps1
-- sh: ./build.sh

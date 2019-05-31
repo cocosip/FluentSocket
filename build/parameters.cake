@@ -135,6 +135,7 @@ public class BuildParameters
         context.Information($"Cake BuildParameters:-------------begin--------------");
         context.Information($"IsLocalBuild:{parameters.IsLocalBuild}");
         context.Information($"IsRunningOnUnix:{parameters.IsRunningOnUnix}");
+        context.Information($"IsRunningOnWindows:{parameters.IsRunningOnWindows}");
         context.Information($"IsRunningOnTravisCI:{parameters.IsRunningOnTravisCI}");
         context.Information($"IsRunningOnAppVeyor:{parameters.IsRunningOnAppVeyor}");
         context.Information($"IsPullRequest:{parameters.IsPullRequest}");

@@ -11,7 +11,7 @@ image:
 build_script:
 - ps: |
     if ($isLinux) {
-      ./build.sh
+      build_script: ./build.sh
     } else {
-      ./build.ps1
+      build_script: ./build.ps1
     }

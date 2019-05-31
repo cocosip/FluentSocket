@@ -8,10 +8,6 @@ image:
   - Visual Studio 2019
   - Ubuntu
 
-build_script:
-- ps: |
-    if ($isLinux) {
-      build_script: ./build.sh
-    } else {
-      build_script: ./build.ps1
-    }
+install:
+- ps: ./build.ps1
+- sh: ./build.sh

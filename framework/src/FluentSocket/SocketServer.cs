@@ -48,6 +48,11 @@ namespace FluentSocket
             _channelManager = channelManager;
             _setting = setting;
 
+            _setting.OnChannelActiveHandler = setting.OnChannelActiveHandler == null ? f => { } : setting.OnChannelActiveHandler;
+            _setting.OnChannelInActiveHandler = setting.OnChannelInActiveHandler == null ? f => { } : setting.OnChannelInActiveHandler;
+
+
+
             Name = "SocketServer-" + ObjectId.GenerateNewStringId();
             LocalIPAddress = _setting.ListeningEndPoint.ToStringAddress();
 
@@ -118,7 +123,7 @@ namespace FluentSocket
                             pipeline.AddLast(new IdleStateHandler(_setting.ReaderIdleTimeSeconds, _setting.WriterIdleTimeSeconds, _setting.AllIdleTimeSeconds));
                         }
                         //Server channel manager
-                        pipeline.AddLast("channel-manager", _provider.CreateInstance<ServerChannelManagerHandler>(_channelManager));
+                        pipeline.AddLast("channel-manager", _provider.CreateInstance<ServerChannelManagerHandler>(_channelManager, _setting.OnChannelActiveHandler, _setting.OnChannelInActiveHandler));
                         //RemotingMessage coder and encoder
                         pipeline.AddLast(new MessageDecoder(), new MessageEncoder());
                         //Hearbeat sender

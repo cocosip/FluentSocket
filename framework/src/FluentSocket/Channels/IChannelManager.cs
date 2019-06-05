@@ -9,8 +9,8 @@ namespace FluentSocket.Channels
     {
         IChannelGroup Group { get; }
         void Initialize(IChannelGroup channelGroup);
-        void AddChannel(IChannel channel);
-        void RemoveChannel(Func<ChannelInfo, bool> predicate);
+        ChannelInfo AddChannel(IChannel channel);
+        ChannelInfo RemoveChannel(Func<ChannelInfo, bool> predicate);
         ChannelInfo FindChannelInfo(Func<ChannelInfo, bool> predicate);
         IChannel FindFirstChannel(Func<ChannelInfo, bool> predicate);
         List<IChannel> FindChannels(Func<ChannelInfo, bool> predicate);

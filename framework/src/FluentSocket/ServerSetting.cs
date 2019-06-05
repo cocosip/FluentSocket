@@ -1,4 +1,5 @@
-﻿using FluentSocket.Traffic;
+﻿using FluentSocket.Channels;
+using FluentSocket.Traffic;
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -27,5 +28,13 @@ namespace FluentSocket
         /// <summary>RequestMessageHandler configure
         /// </summary>
         public Action<IDictionary<int, IRequestMessageHandler>> RequestMessageHandlerConfigure { get; set; }
+
+        /// <summary>The action when channel active
+        /// </summary>
+        public Action<ChannelInfo> OnChannelActiveHandler { get; set; }
+
+        /// <summary>The action when channel inactive
+        /// </summary>
+        public Action<ChannelInfo> OnChannelInActiveHandler { get; set; }
     }
 }

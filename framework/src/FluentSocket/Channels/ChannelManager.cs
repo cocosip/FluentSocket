@@ -32,7 +32,7 @@ namespace FluentSocket.Channels
             }
         }
 
-        public void AddChannel(IChannel channel)
+        public ChannelInfo AddChannel(IChannel channel)
         {
             lock (SyncObject)
             {
@@ -43,10 +43,11 @@ namespace FluentSocket.Channels
                     ObjectId.GenerateNewStringId());
                 Channels.Add(channelInfo);
                 _logger.LogInformation($"{nameof(ChannelManager)},Add new channel:{channelInfo.ToString()}");
+                return channelInfo;
             }
         }
 
-        public void RemoveChannel(Func<ChannelInfo, bool> predicate)
+        public ChannelInfo RemoveChannel(Func<ChannelInfo, bool> predicate)
         {
             lock (SyncObject)
             {
@@ -54,6 +55,7 @@ namespace FluentSocket.Channels
                 Channels.Remove(channelInfo);
                 Group.FirstOrDefault(x => x.Id.AsLongText() == channelInfo.ChannelId);
                 _logger.LogInformation($"{nameof(ChannelManager)},Remove channel:{channelInfo.ToString()}");
+                return channelInfo;
             }
         }
 

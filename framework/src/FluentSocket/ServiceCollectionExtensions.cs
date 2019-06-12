@@ -7,8 +7,10 @@ namespace FluentSocket
     {
         public static IServiceCollection AddFluentSocket(this IServiceCollection services)
         {
-            services.AddTransient<IChannelManager, ChannelManager>();
-            services.AddSingleton<IScheduleService, ScheduleService>();
+            services
+                .AddTransient<IChannelManager, ChannelManager>()
+                .AddSingleton<IScheduleService, ScheduleService>()
+                .AddSingleton<IFluentSocketFactory, FluentSocketFactory>();
             return services;
         }
     }

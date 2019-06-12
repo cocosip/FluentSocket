@@ -37,6 +37,7 @@ namespace FluentSocket.TestPushClient
                 .AddPerformance()
                 .AddFluentSocket();
             var provider = services.BuildServiceProvider();
+            var socketFactory = provider.GetService<IFluentSocketFactory>();
             _mode = "Async";
 
             //客户端
@@ -51,7 +52,7 @@ namespace FluentSocket.TestPushClient
                 EnableHeartbeat = false,
                 ServerEndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 22000),
             };
-            _client = provider.CreateClient(setting);
+            _client = socketFactory.CreateClient(setting);
 
 
             _logger = provider.GetService<ILogger<SocketClient>>();

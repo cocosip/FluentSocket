@@ -98,6 +98,8 @@ namespace FluentSocket.Net45TestClient
             ILoggerFactory loggerFactory = provider.GetService<ILoggerFactory>();
             loggerFactory.AddLog4Net();
 
+            var socketFactory = provider.GetService<IFluentSocketFactory>();
+
             //发送总条数
             _messageCount = 1000000;
             _mode = "Async";
@@ -118,7 +120,7 @@ namespace FluentSocket.Net45TestClient
                 //GroupEventLoopCount = 2
             };
 
-            _client = provider.CreateClient(setting);
+            _client = socketFactory.CreateClient(setting);
 
             _logger = provider.GetService<ILogger<SocketClient>>();
             _performanceService = provider.GetService<IPerformanceService>();

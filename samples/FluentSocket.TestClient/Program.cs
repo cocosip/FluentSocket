@@ -92,6 +92,7 @@ namespace FluentSocket.TestClient
                 .AddPerformance()
                 .AddFluentSocket();
             var provider = services.BuildServiceProvider();
+            var socketFactory = provider.GetService<IFluentSocketFactory>();
             //发送总条数
             _messageCount = 1000000;
             _mode = "Async";
@@ -112,7 +113,7 @@ namespace FluentSocket.TestClient
                 //GroupEventLoopCount = 2
             };
 
-            _client = provider.CreateClient(setting);
+            _client = socketFactory.CreateClient(setting);
 
             _logger = provider.GetService<ILogger<SocketClient>>();
             _performanceService = provider.GetService<IPerformanceService>();

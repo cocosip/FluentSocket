@@ -38,6 +38,8 @@ namespace FluentSocket.TestServer
                 .AddPerformance()
                 .AddFluentSocket();
             var provider = services.BuildServiceProvider();
+            var socketFactory = provider.GetService<IFluentSocketFactory>();
+
 
             //客户端
             var setting = new ServerSetting()
@@ -53,7 +55,7 @@ namespace FluentSocket.TestServer
                 //BossGroupEventLoopCount = 1,
                 //WorkGroupEventLoopCount = 2,
             };
-            _server = provider.CreateServer(setting);
+            _server = socketFactory.CreateServer(setting);
 
             _logger = provider.GetService<ILogger<SocketServer>>();
             _performanceService = provider.GetService<IPerformanceService>();

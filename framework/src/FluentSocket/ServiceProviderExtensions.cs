@@ -15,15 +15,5 @@ namespace FluentSocket
             return (T)ActivatorUtilities.CreateInstance(provider, typeof(T), args);
         }
 
-
-        public static SocketServer CreateServer(this IServiceProvider provider, ServerSetting setting)
-        {
-            return CreateInstance<SocketServer>(provider, setting);
-        }
-
-        public static SocketClient CreateClient(this IServiceProvider provider, ClientSetting setting)
-        {
-            return CreateInstance<SocketClient>(provider, setting);
-        }
     }
 }

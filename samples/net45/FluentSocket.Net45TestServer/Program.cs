@@ -42,6 +42,7 @@ namespace FluentSocket.Net45TestServer
 
             ILoggerFactory loggerFactory = provider.GetService<ILoggerFactory>();
             loggerFactory.AddLog4Net();
+            var socketFactory = provider.GetService<IFluentSocketFactory>();
 
             //客户端
             var setting = new ServerSetting()
@@ -57,7 +58,7 @@ namespace FluentSocket.Net45TestServer
                 //BossGroupEventLoopCount = 1,
                 //WorkGroupEventLoopCount = 2,
             };
-            _server = provider.CreateServer(setting);
+            _server = socketFactory.CreateServer(setting);
 
             _logger = provider.GetService<ILogger<SocketServer>>();
             _performanceService = provider.GetService<IPerformanceService>();

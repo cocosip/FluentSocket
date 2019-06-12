@@ -89,9 +89,9 @@ namespace FluentSocket.TestPushServer
                 .AddPerformance()
                 .AddFluentSocket();
             var provider = services.BuildServiceProvider();
-
             _logger = provider.GetService<ILogger<SocketServer>>();
-
+            var socketFactory = provider.GetService<IFluentSocketFactory>();
+            
             //服务器端
             var setting = new ServerSetting()
             {
@@ -108,7 +108,7 @@ namespace FluentSocket.TestPushServer
                     c.AddLast(provider.CreateInstance<ClientActiveHandler>(new Action(SetStartPush)));
                 }
             };
-            _server = provider.CreateServer(setting);
+            _server = socketFactory.CreateServer(setting);
 
 
             _mode = "Async";

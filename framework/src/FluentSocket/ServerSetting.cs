@@ -9,13 +9,17 @@ namespace FluentSocket
     public class ServerSetting : AbstractSetting
     {
 
-        /// <summary>BossGroup循环数
+        /// <summary>BossGroup
         /// </summary>
         public int BossGroupEventLoopCount { get; set; } = 1;
 
-        /// <summary>WorkGroup循环数
+        /// <summary>WorkGroup
         /// </summary>
         public int WorkGroupEventLoopCount { get; set; } = 1;
+
+        /// <summary>Business
+        /// </summary>
+        public int BusinessEventLoopCount { get; set; } = 2;
 
         /// <summary>SoBacklog
         /// </summary>

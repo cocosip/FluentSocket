@@ -40,10 +40,11 @@ namespace FluentSocket.TestClient
             var index = 0;
             var sendBytes = new byte[1024];
             //Encoding.UTF8.GetBytes("Hello,I'm client!");
-
-            for (var i = 0; i < 3; i++)
+            Task.Delay(2000).Wait();
+            for (var i = 0; i < 1; i++)
             {
-                Task.Factory.StartNew(() =>
+
+                var task = Task.Factory.StartNew(() =>
                 {
                     while (index < _messageCount)
                     {
@@ -58,8 +59,8 @@ namespace FluentSocket.TestClient
                                     return;
                                 }
                                 var response = t.Result;
-                                //_logger.LogInformation("接收服务器端返回:{0}" + Encoding.UTF8.GetString(response.Body));
-                                if (response.ResponseCode != (int)ResponseCodes.HasException)
+                                 //_logger.LogInformation("接收服务器端返回:{0}" + Encoding.UTF8.GetString(response.Body));
+                                 if (response.ResponseCode != (int)ResponseCodes.HasException)
                                 {
                                     _performanceService.IncrementKeyCount(_mode, (DateTime.Now - response.RequestTime).TotalMilliseconds);
                                 }

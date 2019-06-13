@@ -4,6 +4,8 @@ using FluentSocket.Traffic;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace FluentSocket.Handlers
 {
@@ -20,28 +22,92 @@ namespace FluentSocket.Handlers
         }
 
 
+
+
         protected override void ChannelRead0(IChannelHandlerContext ctx, RequestMessage msg)
         {
             try
             {
                 if (_requestMessageHandlerDict.TryGetValue(msg.Code, out IRequestMessageHandler handler))
                 {
-                    //Method 3:
-                    handler.HandleRequestAsync(msg).ContinueWith(t =>
+
+                    void action()
                     {
-                        if (t.Exception != null)
+                        handler.HandleRequestAsync(msg).ContinueWith(t =>
                         {
-                            _logger.LogError($"Handle remotingRequest has error,{t.Exception.Message}", t.Exception);
-                        }
-                        if (ctx.Channel.IsWritable)
-                        {
-                            ctx.WriteAndFlushAsync(t.Result);
-                        }
-                        else
-                        {
-                            _logger.LogInformation("Server channel response write,channel is not writable!");
-                        }
-                    });
+                            if (t.Exception != null)
+                            {
+                                _logger.LogError($"Handle remotingRequest has error,{t.Exception.Message}", t.Exception);
+                            }
+                            if (ctx.Channel.IsWritable)
+                            {
+                                ctx.WriteAndFlushAsync(t.Result).Wait();
+                            }
+                            else
+                            {
+                                ctx.Flush();
+                                _logger.LogInformation("Server channel response write,channel is not writable!");
+                            }
+                        });
+                    }
+                    if (ctx.Executor.InEventLoop)
+                    {
+                        action();
+                    }
+                    else
+                    {
+                        ctx.Executor.Execute(action);
+                    }
+                    //ThreadPool.QueueUserWorkItem(o => action());
+
+                    //Task.Factory.StartNew(() =>
+                    // {
+                    //     handler.HandleRequestAsync(msg).ContinueWith(t =>
+                    //     {
+                    //         if (t.Exception != null)
+                    //         {
+                    //             _logger.LogError($"Handle remotingRequest has error,{t.Exception.Message}", t.Exception);
+                    //         }
+                    //         if (ctx.Channel.IsWritable)
+                    //         {
+                    //             ctx.WriteAndFlushAsync(t.Result).Wait();
+                    //         }
+                    //         else
+                    //         {
+                    //             _logger.LogInformation("Server channel response write,channel is not writable!");
+                    //         }
+                    //     });
+                    // });
+
+                    //if (ctx.Executor.InEventLoop)
+                    //{
+                    //    _logger.LogInformation("InEventLoop");
+                    //    action();
+                    //}
+                    //else
+                    //{
+                    //    ctx.Executor.Execute(state => action(), null);
+                    //}
+                    //ctx.Executor.Execute(() =>
+                    //{
+                    //    //_logger.LogInformation("当前线程Id:{0}", Thread.CurrentThread.ManagedThreadId);
+                    //    //Method 3:
+                    //    handler.HandleRequestAsync(msg).ContinueWith(t =>
+                    //    {
+                    //        if (t.Exception != null)
+                    //        {
+                    //            _logger.LogError($"Handle remotingRequest has error,{t.Exception.Message}", t.Exception);
+                    //        }
+                    //        if (ctx.Channel.IsWritable)
+                    //        {
+                    //            ctx.WriteAndFlushAsync(t.Result).Wait();
+                    //        }
+                    //        else
+                    //        {
+                    //            _logger.LogInformation("Server channel response write,channel is not writable!");
+                    //        }
+                    //    });
+                    //});
 
                 }
                 else

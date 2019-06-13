@@ -35,6 +35,7 @@ namespace FluentSocket
         public bool IsRunning { get { return _isRunning; } }
         private IEventLoopGroup _bossGroup = null;
         private IEventLoopGroup _workerGroup = null;
+        private IEventLoopGroup _businessGroup = null;
         private IChannel _boundChannel;
         private bool _isRunning = false;
         private readonly IDictionary<int, IRequestMessageHandler> _requestMessageHandlerDict;
@@ -76,11 +77,13 @@ namespace FluentSocket
                 var dispatcher = new DispatcherEventLoopGroup();
                 _bossGroup = dispatcher;
                 _workerGroup = new WorkerEventLoopGroup(dispatcher);
+                _businessGroup = new MultithreadEventLoopGroup(_setting.BusinessEventLoopCount);
             }
             else
             {
                 _bossGroup = new MultithreadEventLoopGroup(_setting.BossGroupEventLoopCount);
                 _workerGroup = new MultithreadEventLoopGroup(_setting.WorkGroupEventLoopCount);
+                _businessGroup = new MultithreadEventLoopGroup(_setting.BusinessEventLoopCount);
             }
 
             try
@@ -249,8 +252,11 @@ namespace FluentSocket
             {
                 requestMessageHandler.RegisterRequestHandler(item.Key, item.Value);
             }
-            pipeline.AddLast("request", requestMessageHandler);
+            //Business
+            pipeline.AddLast(_businessGroup, "request", requestMessageHandler);
+            //pipeline.AddLast(_businessGroup, "request", requestMessageHandler);
         }
+
 
 
         private void StartScanTimeoutPushMessageTask()

@@ -7,7 +7,7 @@ namespace FluentSocket
 {
     public class ClientSetting : AbstractSetting
     {
-        /// <summary>Group循环数
+        /// <summary>Group
         /// </summary>
         public int GroupEventLoopCount { get; set; } = 1;
 

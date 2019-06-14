@@ -112,7 +112,6 @@ namespace FluentSocket.Net45TestClient
                 SoRcvbuf = 1024 * 1024 * 2,
                 SoSndbuf = 1024 * 1024 * 2,
                 IsSsl = false,
-                UseLibuv = false,
                 EnableHeartbeat = false,
                 EnableReConnect = true,
                 ReConnectDelaySeconds = 3,

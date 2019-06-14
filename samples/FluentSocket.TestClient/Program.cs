@@ -61,7 +61,7 @@ namespace FluentSocket.TestClient
                             //    _logger.LogInformation("ResponseException,ResponseCode:{0}", sendTask.Result.ResponseCode);
                             //}
 
-                            _client.SendAsync(request, 10000, 300).ContinueWith(t =>
+                            _client.SendAsync(request, 10000, 1000).ContinueWith(t =>
                              {
                                  if (t.Exception != null)
                                  {
@@ -69,8 +69,8 @@ namespace FluentSocket.TestClient
                                      return;
                                  }
                                  var response = t.Result;
-                                //_logger.LogInformation("接收服务器端返回:{0}" + Encoding.UTF8.GetString(response.Body));
-                                if (response.ResponseCode != (int)ResponseCodes.HasException)
+                                 //_logger.LogInformation("接收服务器端返回:{0}" + Encoding.UTF8.GetString(response.Body));
+                                 if (response.ResponseCode != (int)ResponseCodes.HasException)
                                  {
                                      _performanceService.IncrementKeyCount(_mode, (DateTime.Now - response.RequestTime).TotalMilliseconds);
                                  }
@@ -116,7 +116,6 @@ namespace FluentSocket.TestClient
                 SoRcvbuf = 1024 * 1024 * 2,
                 SoSndbuf = 1024 * 1024 * 2,
                 IsSsl = false,
-                UseLibuv = false,
                 EnableHeartbeat = false,
                 EnableReConnect = true,
                 ReConnectDelaySeconds = 3,

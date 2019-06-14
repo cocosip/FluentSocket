@@ -14,10 +14,6 @@ namespace FluentSocket
         /// </summary>
         public X509Certificate2 TlsCertificate { get; set; }
 
-        /// <summary>Enable libuv
-        /// </summary>
-        public bool UseLibuv { get; set; }
-
         /// <summary>Round robin request expired interval (ms)
         /// </summary>
         public int ScanTimeoutRequestInterval { get; set; } = 1000;

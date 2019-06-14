@@ -17,14 +17,14 @@ namespace FluentSocket.TestServer
             _performanceService = performanceService;
         }
 
-        public Task<ResponseMessage> HandleRequestAsync(RequestMessage request)
+        public ResponseMessage HandleRequest(RequestMessage request)
         {
-            
             var response = new ResponseMessage(101, Encoding.UTF8.GetBytes("Hello," + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss fff")), request.Id, request.Code, request.CreatedTime);
             //_logger.LogInformation("RequestId:{0},TimeSpan:{1}",request.Id, (DateTime.Now - request.CreatedTime).TotalMilliseconds);
             _performanceService.IncrementKeyCount("Async", (DateTime.Now - request.CreatedTime).TotalMilliseconds);
-            Thread.Sleep(2);
-            return Task.FromResult(response);
+            //Thread.Sleep(2);
+            return response;
+
         }
     }
 }

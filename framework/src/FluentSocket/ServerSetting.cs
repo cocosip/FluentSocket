@@ -8,6 +8,9 @@ namespace FluentSocket
 {
     public class ServerSetting : AbstractSetting
     {
+        /// <summary>Enable libuv
+        /// </summary>
+        public bool UseLibuv { get; set; }
 
         /// <summary>BossGroup
         /// </summary>

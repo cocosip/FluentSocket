@@ -48,7 +48,6 @@ namespace FluentSocket.TestPushClient
                 SoRcvbuf = 1024 * 1024 * 2,
                 SoSndbuf = 1024 * 1024 * 2,
                 IsSsl = false,
-                UseLibuv = false,
                 EnableHeartbeat = false,
                 ServerEndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 22000),
             };

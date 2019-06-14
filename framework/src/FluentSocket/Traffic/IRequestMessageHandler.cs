@@ -5,6 +5,6 @@ namespace FluentSocket.Traffic
 {
     public interface IRequestMessageHandler
     {
-        Task<ResponseMessage> HandleRequestAsync(RequestMessage request);
+        ResponseMessage HandleRequest(RequestMessage request);
     }
 }

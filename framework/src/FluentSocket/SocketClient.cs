@@ -5,7 +5,6 @@ using DotNetty.Handlers.Tls;
 using DotNetty.Transport.Bootstrapping;
 using DotNetty.Transport.Channels;
 using DotNetty.Transport.Channels.Sockets;
-using DotNetty.Transport.Libuv;
 using FluentSocket.Codecs;
 using FluentSocket.Extensions;
 using FluentSocket.Handlers;
@@ -46,6 +45,7 @@ namespace FluentSocket
 
         public SocketClient(IServiceProvider provider, ILoggerFactory loggerFactory, IScheduleService scheduleService, ClientSetting setting)
         {
+            //ManualResetEventSlim
             _provider = provider;
             _logger = loggerFactory.CreateLogger(FluentSocketSettings.LoggerName);
             _scheduleService = scheduleService;
@@ -67,29 +67,13 @@ namespace FluentSocket
                 return;
             }
 
-            if (_setting.UseLibuv)
-            {
-                _group = new EventLoopGroup();
-            }
-            else
-            {
-                _group = new MultithreadEventLoopGroup(_setting.GroupEventLoopCount);
-            }
-
             try
             {
+                _group = new MultithreadEventLoopGroup(_setting.GroupEventLoopCount);
                 _bootStrap = new Bootstrap();
                 _bootStrap.Group(_group);
-                if (_setting.UseLibuv)
-                {
-                    _bootStrap.Channel<TcpChannel>();
-                }
-                else
-                {
-                    _bootStrap.Channel<TcpSocketChannel>();
-                }
-
                 _bootStrap
+                    .Channel<TcpSocketChannel>()
                     .Option(ChannelOption.TcpNodelay, _setting.TcpNodelay)
                     .Option(ChannelOption.SoKeepalive, _setting.SoKeepalive)
                     .Option(ChannelOption.WriteBufferHighWaterMark, _setting.WriteBufferHighWaterMark)
@@ -128,13 +112,15 @@ namespace FluentSocket
                         //Set request response
                         pipeline.AddLast("request-response", _provider.CreateInstance<ResponseMessageHandler>(new Action<ResponseMessage>(HandleResponseMessage)));
 
+                        pipeline.AddLast("channel-watcher", _provider.CreateInstance<ChannelWatcherHandler>());
+
                         //PushMessage Code Handler
                         AddPushMessageHandler(pipeline);
 
                         if (_setting.EnableReConnect)
                         {
                             //Reconnect to server
-                            pipeline.AddLast("reconnect", _provider.CreateInstance<ReConnectHandler>(_setting, new Func<Task>(DoConnectIfNeed)));
+                            pipeline.AddLast("reconnect", _provider.CreateInstance<ReConnectHandler>(_setting, new Func<Task>(DoReConnectIfNeed)));
                         }
                         _setting.PipelineConfigure?.Invoke(pipeline);
 
@@ -177,14 +163,57 @@ namespace FluentSocket
             }
         }
 
+
+
+        /// <summary>Send message, return ResponseMessage
+        /// </summary>
+        public Task<ResponseMessage> SendAsync(RequestMessage request, int timeoutMillis, int thresholdCount = 500)
+        {
+            CheckChannel(_clientChannel);
+
+            //var s = FlowControlUtil.CalculateFlowControlTimeMilliseconds(_responseFutureDict.Count, thresholdCount);
+            //if (s > 0)
+            //{
+            //    Thread.Sleep(s);
+            //}
+            var taskCompletionSource = new TaskCompletionSource<ResponseMessage>();
+            var responseFuture = new ResponseFuture(request, timeoutMillis, taskCompletionSource);
+            if (!_responseFutureDict.TryAdd(request.Id, responseFuture))
+            {
+                throw new Exception($"Add remoting request response future failed. request id:{request.Id}");
+            }
+
+            if (!_clientChannel.IsWritable)
+            {
+                _logger.LogInformation("Channel is not writable!");
+                _clientChannel.WriteAndFlushAsync(request).Wait();
+            }
+            else
+            {
+                _clientChannel.WriteAndFlushAsync(request);
+            }
+
+            return taskCompletionSource.Task;
+        }
+
+
+        /// <summary>Register PushMessageHandler
+        /// </summary>
+        public SocketClient RegisterPushMessageHandler(int code, IPushMessageHandler pushMessageHandler)
+        {
+            _pushMessageHandlerDict[code] = pushMessageHandler;
+            return this;
+        }
+
+        /// <summary>DoConnect to the server
+        /// </summary>
         private async Task DoConnect()
         {
             _clientChannel = _setting.LocalEndPoint == null ? await _bootStrap.ConnectAsync(_setting.ServerEndPoint) : await _bootStrap.ConnectAsync(_setting.ServerEndPoint, _setting.LocalEndPoint);
             _logger.LogInformation($"Client DoConnect! name:{Name},serverEndPoint:{_clientChannel.RemoteAddress.ToStringAddress()},localAddress:{_clientChannel.LocalAddress.ToStringAddress()}");
         }
 
-
-        private async Task DoConnectIfNeed()
+        private async Task DoReConnectIfNeed()
         {
             if (!_setting.EnableReConnect || _setting.ReConnectMaxCount < _reConnectAttempt)
             {
@@ -214,46 +243,22 @@ namespace FluentSocket
                 if (_reConnectAttempt < _setting.ReConnectMaxCount && !reConnectSuccess)
                 {
                     Thread.Sleep(_setting.ReConnectIntervalMilliSeconds);
-                    await DoConnectIfNeed();
+                    await DoReConnectIfNeed();
                 }
             }
         }
 
-
-        /// <summary>Send message, return ResponseMessage
-        /// </summary>
-        public Task<ResponseMessage> SendAsync(RequestMessage request, int timeoutMillis, int thresholdCount = 500)
+        private void ChannelWritableChanged(bool isWritable)
         {
-            CheckChannel(_clientChannel);
-            while (!_clientChannel.IsWritable)
+            if (!isWritable)
             {
-                Thread.Sleep(5);
-            }
-            var s = FlowControlUtil.CalculateFlowControlTimeMilliseconds(_responseFutureDict.Count, thresholdCount);
-            if (s > 0)
-            {
-                Thread.Sleep(s);
-            }
-            var taskCompletionSource = new TaskCompletionSource<ResponseMessage>();
-            var responseFuture = new ResponseFuture(request, timeoutMillis, taskCompletionSource);
-            if (!_responseFutureDict.TryAdd(request.Id, responseFuture))
-            {
-                throw new Exception($"Add remoting request response future failed. request id:{request.Id}");
-            }
 
-            _clientChannel.WriteAndFlushAsync(request);
-            return taskCompletionSource.Task;
+            }
+            else
+            {
+
+            }
         }
-
-
-        /// <summary>Register PushMessageHandler
-        /// </summary>
-        public SocketClient RegisterPushMessageHandler(int code, IPushMessageHandler pushMessageHandler)
-        {
-            _pushMessageHandlerDict[code] = pushMessageHandler;
-            return this;
-        }
-
 
         private void CheckChannel(IChannel channel)
         {
@@ -266,7 +271,6 @@ namespace FluentSocket
                 throw new Exception($"Current channel is not useable,channelId:{channel.Id.AsShortText()}");
             }
         }
-
 
         private void StartScanTimeoutRequestTask()
         {

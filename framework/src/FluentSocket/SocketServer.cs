@@ -35,7 +35,6 @@ namespace FluentSocket
         public bool IsRunning { get { return _isRunning; } }
         private IEventLoopGroup _bossGroup = null;
         private IEventLoopGroup _workerGroup = null;
-        private IEventLoopGroup _businessGroup = null;
         private IChannel _boundChannel;
         private bool _isRunning = false;
         private readonly IDictionary<int, IRequestMessageHandler> _requestMessageHandlerDict;
@@ -77,13 +76,11 @@ namespace FluentSocket
                 var dispatcher = new DispatcherEventLoopGroup();
                 _bossGroup = dispatcher;
                 _workerGroup = new WorkerEventLoopGroup(dispatcher);
-                _businessGroup = new EventLoopGroup(_setting.BusinessEventLoopCount);
             }
             else
             {
                 _bossGroup = new MultithreadEventLoopGroup(_setting.BossGroupEventLoopCount);
                 _workerGroup = new MultithreadEventLoopGroup(_setting.WorkGroupEventLoopCount);
-                _businessGroup = new MultithreadEventLoopGroup(_setting.BusinessEventLoopCount);
             }
 
             try
@@ -185,13 +182,18 @@ namespace FluentSocket
 
         /// <summary>Push message to single client
         /// </summary>
-        public Task<PushResponseMessage> PushMessageToSingleClientAsync(PushMessage pushMessage, Func<ChannelInfo, bool> predicate, int timeoutMillis)
+        public Task<PushResponseMessage> PushMessageToSingleClientAsync(PushMessage pushMessage, Func<ChannelInfo, bool> predicate, int timeoutMillis, int thresholdCount = 500)
         {
             var channel = _channelManager.FindFirstChannel(predicate);
             CheckChannel(channel);
             while (!channel.IsWritable)
             {
-                Thread.Sleep(50);
+                Thread.Sleep(5);
+            }
+            var s = FlowControlUtil.CalculateFlowControlTimeMilliseconds(_pushResponseFutureDict.Count, thresholdCount);
+            if (s > 0)
+            {
+                Thread.Sleep(s);
             }
             var taskCompletionSource = new TaskCompletionSource<PushResponseMessage>();
             var pushResponseFuture = new PushResponseFuture(pushMessage, timeoutMillis, taskCompletionSource);
@@ -206,12 +208,17 @@ namespace FluentSocket
 
         /// <summary>Push message to multiple client
         /// </summary>
-        public Task PushMessageToMultipleClientAsync(PushMessage pushMessage, Func<ChannelInfo, bool> predicate, int timeoutMillis)
+        public Task PushMessageToMultipleClientAsync(PushMessage pushMessage, Func<ChannelInfo, bool> predicate, int timeoutMillis, int thresholdCount = 500)
         {
             //push to one client need ack
             pushMessage.NeedAck = false;
 
             var channels = _channelManager.FindChannels(predicate);
+            var s = FlowControlUtil.CalculateFlowControlTimeMilliseconds(_pushResponseFutureDict.Count, thresholdCount);
+            if (s > 0)
+            {
+                Thread.Sleep(s);
+            }
             foreach (var channel in channels)
             {
                 if (channel.IsWritable)
@@ -253,7 +260,7 @@ namespace FluentSocket
                 requestMessageHandler.RegisterRequestHandler(item.Key, item.Value);
             }
             //Business
-            pipeline.AddLast(_businessGroup, "request", requestMessageHandler);
+            pipeline.AddLast("request", requestMessageHandler);
         }
 
 

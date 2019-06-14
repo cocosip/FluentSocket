@@ -5,6 +5,7 @@ using FluentSocket.Traffic;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace FluentSocket.Handlers
 {
@@ -28,22 +29,27 @@ namespace FluentSocket.Handlers
                 if (_pushMessageHandlerDict.TryGetValue(msg.Code, out IPushMessageHandler handler))
                 {
                     _logger.LogDebug($"Handle ServerPushMessage,Code is :{msg.Code},PushMessageId:{msg.Id}");
-                    handler.HandlePushMessageAsync(msg).ContinueWith(t =>
+
+                    void action()
                     {
-                        if (t.Exception != null)
+                        handler.HandlePushMessageAsync(msg).ContinueWith(t =>
                         {
-                            _logger.LogError("Handle server push message has error,{0}", t.Exception.Message);
-                        }
-                        if (ctx.Channel.IsWritable)
-                        {
-                            ctx.WriteAndFlushAsync(t.Result);
-                        }
-                        else
-                        {
-                            _logger.LogInformation("Client channel server push message response write fail,channel is not writable!");
-                            ReferenceCountUtil.Release(msg);
-                        }
-                    });
+                            if (t.Exception != null)
+                            {
+                                _logger.LogError("Handle server push message has error,{0}", t.Exception.Message);
+                            }
+                            if (ctx.Channel.IsWritable)
+                            {
+                                ctx.WriteAndFlushAsync(t.Result);
+                            }
+                            else
+                            {
+                                _logger.LogInformation("Client channel server push message response write fail,channel is not writable!");
+                                ReferenceCountUtil.Release(msg);
+                            }
+                        });
+                    }
+                    Task.Run(() => action());
                 }
                 else
                 {

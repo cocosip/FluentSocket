@@ -222,20 +222,25 @@ namespace FluentSocket
 
         /// <summary>Send message, return ResponseMessage
         /// </summary>
-        public Task<ResponseMessage> SendAsync(RequestMessage request, int timeoutMillis)
+        public Task<ResponseMessage> SendAsync(RequestMessage request, int timeoutMillis, int thresholdCount = 500)
         {
             CheckChannel(_clientChannel);
             while (!_clientChannel.IsWritable)
             {
-                Thread.Sleep(10);
+                Thread.Sleep(5);
+            }
+            var s = FlowControlUtil.CalculateFlowControlTimeMilliseconds(_responseFutureDict.Count, thresholdCount);
+            if (s > 0)
+            {
+                Thread.Sleep(s);
             }
             var taskCompletionSource = new TaskCompletionSource<ResponseMessage>();
             var responseFuture = new ResponseFuture(request, timeoutMillis, taskCompletionSource);
-
             if (!_responseFutureDict.TryAdd(request.Id, responseFuture))
             {
                 throw new Exception($"Add remoting request response future failed. request id:{request.Id}");
             }
+
             _clientChannel.WriteAndFlushAsync(request);
             return taskCompletionSource.Task;
         }

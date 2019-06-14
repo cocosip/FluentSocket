@@ -1,4 +1,5 @@
-﻿using DotNetty.Transport.Channels;
+﻿using DotNetty.Common.Utilities;
+using DotNetty.Transport.Channels;
 using FluentSocket.Codecs;
 using FluentSocket.Traffic;
 using Microsoft.Extensions.Logging;
@@ -29,23 +30,6 @@ namespace FluentSocket.Handlers
             {
                 if (_requestMessageHandlerDict.TryGetValue(msg.Code, out IRequestMessageHandler handler))
                 {
-                    //handler.HandleRequestAsync(msg).ContinueWith(t =>
-                    //{
-                    //    if (t.Exception != null)
-                    //    {
-                    //        _logger.LogError($"Handle remotingRequest has error,{t.Exception.Message}", t.Exception);
-                    //    }
-                    //    if (_ctx.Channel.IsWritable)
-                    //    {
-                    //        _ctx.WriteAndFlushAsync(t.Result);
-                    //    }
-                    //    else
-                    //    {
-                    //        _ctx.Flush();
-                    //        _logger.LogInformation("Server channel response write,channel is not writable!");
-                    //    }
-                    //});
-
                     void action()
                     {
                         handler.HandleRequestAsync(msg).ContinueWith(t =>
@@ -56,25 +40,18 @@ namespace FluentSocket.Handlers
                             }
                             if (_ctx.Channel.IsWritable)
                             {
-                                _ctx.WriteAndFlushAsync(t.Result).Wait();
+                                _ctx.WriteAndFlushAsync(t.Result);
                             }
                             else
                             {
                                 _ctx.Flush();
+                                ReferenceCountUtil.Release(msg);
                                 _logger.LogInformation("Server channel response write,channel is not writable!");
                             }
                         });
                     }
-                    //action();
-                    if (_ctx.Executor.InEventLoop)
-                    {
-                        action();
-                    }
-                    else
-                    {
-                        _ctx.Executor.Execute(action);
-                    }
                     //ThreadPool.QueueUserWorkItem(o => action());
+                    Task.Run(() => action());
                 }
                 else
                 {

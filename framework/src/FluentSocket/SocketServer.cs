@@ -77,7 +77,7 @@ namespace FluentSocket
                 var dispatcher = new DispatcherEventLoopGroup();
                 _bossGroup = dispatcher;
                 _workerGroup = new WorkerEventLoopGroup(dispatcher);
-                _businessGroup = new MultithreadEventLoopGroup(_setting.BusinessEventLoopCount);
+                _businessGroup = new EventLoopGroup(_setting.BusinessEventLoopCount);
             }
             else
             {
@@ -254,7 +254,6 @@ namespace FluentSocket
             }
             //Business
             pipeline.AddLast(_businessGroup, "request", requestMessageHandler);
-            //pipeline.AddLast(_businessGroup, "request", requestMessageHandler);
         }
 
 

@@ -44,15 +44,15 @@ namespace FluentSocket.TestServer
             //客户端
             var setting = new ServerSetting()
             {
-                WriteBufferLowWaterMark = 1024 * 1024 * 4,
-                WriteBufferHighWaterMark = 1024 * 1024 * 2,
+                WriteBufferLowWaterMark = 1024 * 1024 * 1,
+                WriteBufferHighWaterMark = 1024 * 1024 * 4,
                 SoRcvbuf = 1024 * 1024 * 2,
                 SoSndbuf = 1024 * 1024 * 2,
                 IsSsl = false,
                 UseLibuv = false,
                 EnableHeartbeat = false,
                 ListeningEndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 21000),
-                BusinessEventLoopCount=1
+                BusinessEventLoopCount = 3
                 //BossGroupEventLoopCount = 1,
                 //WorkGroupEventLoopCount = 2,
             };

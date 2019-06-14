@@ -40,10 +40,9 @@ namespace FluentSocket.TestClient
             var index = 0;
             var sendBytes = new byte[1024];
             //Encoding.UTF8.GetBytes("Hello,I'm client!");
-            Task.Delay(2000).Wait();
-            for (var i = 0; i < 1; i++)
+            //Task.Delay(2000).Wait();
+            for (var i = 0; i < 10; i++)
             {
-
                 var task = Task.Factory.StartNew(() =>
                 {
                     while (index < _messageCount)
@@ -51,24 +50,35 @@ namespace FluentSocket.TestClient
                         try
                         {
                             var request = new RequestMessage(100, sendBytes);
-                            _client.SendAsync(request, 10000).ContinueWith(t =>
+                            var sendTask = _client.SendAsync(request, 10000);
+                            sendTask.Wait();
+                            if (sendTask.Result.ResponseCode != (int)ResponseCodes.HasException)
                             {
-                                if (t.Exception != null)
-                                {
-                                    _logger.LogError(t.Exception, t.Exception.Message);
-                                    return;
-                                }
-                                var response = t.Result;
-                                 //_logger.LogInformation("接收服务器端返回:{0}" + Encoding.UTF8.GetString(response.Body));
-                                 if (response.ResponseCode != (int)ResponseCodes.HasException)
-                                {
-                                    _performanceService.IncrementKeyCount(_mode, (DateTime.Now - response.RequestTime).TotalMilliseconds);
-                                }
-                                else
-                                {
-                                    _logger.LogInformation("ResponseException,ResponseCode:{0}", response.ResponseCode);
-                                }
-                            });
+                                _performanceService.IncrementKeyCount(_mode, (DateTime.Now - sendTask.Result.RequestTime).TotalMilliseconds);
+                            }
+                            else
+                            {
+                                _logger.LogInformation("ResponseException,ResponseCode:{0}", sendTask.Result.ResponseCode);
+                            }
+
+                            //_client.SendAsync(request, 10000).ContinueWith(t =>
+                            //{
+                            //    if (t.Exception != null)
+                            //    {
+                            //        _logger.LogError(t.Exception, t.Exception.Message);
+                            //        return;
+                            //    }
+                            //    var response = t.Result;
+                            //     //_logger.LogInformation("接收服务器端返回:{0}" + Encoding.UTF8.GetString(response.Body));
+                            //     if (response.ResponseCode != (int)ResponseCodes.HasException)
+                            //    {
+                            //        _performanceService.IncrementKeyCount(_mode, (DateTime.Now - response.RequestTime).TotalMilliseconds);
+                            //    }
+                            //    else
+                            //    {
+                            //        _logger.LogInformation("ResponseException,ResponseCode:{0}", response.ResponseCode);
+                            //    }
+                            //});
                         }
                         catch (Exception ex)
                         {
@@ -101,8 +111,8 @@ namespace FluentSocket.TestClient
             //客户端
             var setting = new ClientSetting()
             {
-                WriteBufferLowWaterMark = 1024 * 1024 * 4,
-                WriteBufferHighWaterMark = 1024 * 1024 * 2,
+                WriteBufferLowWaterMark = 1024 * 1024 * 1,
+                WriteBufferHighWaterMark = 1024 * 1024 * 4,
                 SoRcvbuf = 1024 * 1024 * 2,
                 SoSndbuf = 1024 * 1024 * 2,
                 IsSsl = false,

@@ -236,7 +236,7 @@ namespace FluentSocket
             {
                 throw new Exception($"Add remoting request response future failed. request id:{request.Id}");
             }
-            _clientChannel.WriteAndFlushAsync(request).Wait();
+            _clientChannel.WriteAndFlushAsync(request);
             return taskCompletionSource.Task;
         }
 

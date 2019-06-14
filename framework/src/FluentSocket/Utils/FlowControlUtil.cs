@@ -8,7 +8,7 @@
             exceedCount = exceedCount <= 0 ? 1 : exceedCount;
 
             var stepCount = 1 * thresholdCount / 100;
-            stepCount = stepCount < 0 ? 1 : stepCount;
+            stepCount = stepCount <= 0 ? 1 : stepCount;
 
             var times = exceedCount / stepCount;
             times = times < 0 ? 1 : times;

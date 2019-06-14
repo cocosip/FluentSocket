@@ -19,6 +19,11 @@ namespace FluentSocket
         /// </summary>
         public IPEndPoint LocalEndPoint { get; set; }
 
+
+        /// <summary>Enable async to handle push handler
+        /// </summary>
+        public bool EnableAsyncPushHandler { get; set; } = true;
+
         /// <summary>Keep alive
         /// </summary>
         public bool SoKeepalive { get; set; } = false;

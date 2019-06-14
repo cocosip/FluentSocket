@@ -13,9 +13,9 @@ namespace FluentSocket.Handlers
     {
         private readonly ILogger _logger;
         private IDictionary<int, IPushMessageHandler> _pushMessageHandlerDict;
-        private readonly AbstractSetting _setting;
+        private readonly ClientSetting _setting;
 
-        public PushHandler(ILoggerFactory loggerFactory, AbstractSetting setting)
+        public PushHandler(ILoggerFactory loggerFactory, ClientSetting setting)
         {
             _logger = loggerFactory.CreateLogger(FluentSocketSettings.LoggerName);
             _setting = setting;
@@ -49,7 +49,14 @@ namespace FluentSocket.Handlers
                             }
                         });
                     }
-                    Task.Run(() => action());
+                    if (_setting.EnableAsyncPushHandler)
+                    {
+                        Task.Run(() => action());
+                    }
+                    else
+                    {
+                        action();
+                    }
                 }
                 else
                 {

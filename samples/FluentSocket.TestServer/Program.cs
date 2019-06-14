@@ -52,7 +52,6 @@ namespace FluentSocket.TestServer
                 UseLibuv = false,
                 EnableHeartbeat = false,
                 ListeningEndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 21000),
-                BusinessEventLoopCount = 3
                 //BossGroupEventLoopCount = 1,
                 //WorkGroupEventLoopCount = 2,
             };

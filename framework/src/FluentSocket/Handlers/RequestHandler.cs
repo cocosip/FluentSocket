@@ -5,7 +5,6 @@ using FluentSocket.Traffic;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace FluentSocket.Handlers
@@ -15,8 +14,8 @@ namespace FluentSocket.Handlers
         private IChannelHandlerContext _ctx;
         private readonly ILogger _logger;
         private IDictionary<int, IRequestMessageHandler> _requestMessageHandlerDict;
-        private readonly AbstractSetting _setting;
-        public RequestHandler(ILoggerFactory loggerFactory, AbstractSetting setting)
+        private readonly ServerSetting _setting;
+        public RequestHandler(ILoggerFactory loggerFactory, ServerSetting setting)
         {
             _logger = loggerFactory.CreateLogger(FluentSocketSettings.LoggerName);
             _requestMessageHandlerDict = new Dictionary<int, IRequestMessageHandler>();
@@ -50,8 +49,16 @@ namespace FluentSocket.Handlers
                             }
                         });
                     }
-                    //ThreadPool.QueueUserWorkItem(o => action());
-                    Task.Run(() => action());
+
+                    if (_setting.EnableAsyncRequestHandler)
+                    {
+                        Task.Run(() => action());
+                    }
+                    else
+                    {
+                        action();
+                    }
+
                 }
                 else
                 {

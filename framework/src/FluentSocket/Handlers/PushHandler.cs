@@ -11,6 +11,7 @@ namespace FluentSocket.Handlers
 {
     public class PushHandler : SimpleChannelInboundHandler<PushMessage>
     {
+        private IChannelHandlerContext _ctx;
         private readonly ILogger _logger;
         private IDictionary<int, IPushMessageHandler> _pushMessageHandlerDict;
         private readonly ClientSetting _setting;
@@ -21,6 +22,8 @@ namespace FluentSocket.Handlers
             _setting = setting;
             _pushMessageHandlerDict = new Dictionary<int, IPushMessageHandler>();
         }
+
+        public override void HandlerAdded(IChannelHandlerContext context) => this._ctx = context;
         protected override void ChannelRead0(IChannelHandlerContext ctx, PushMessage msg)
         {
             try
@@ -38,12 +41,13 @@ namespace FluentSocket.Handlers
                             {
                                 _logger.LogError("Handle server push message has error,{0}", t.Exception.Message);
                             }
-                            if (ctx.Channel.IsWritable)
+                            if (_ctx.Channel.IsWritable)
                             {
-                                ctx.WriteAndFlushAsync(t.Result);
+                                _ctx.WriteAndFlushAsync(t.Result).Wait();
                             }
                             else
                             {
+
                                 _logger.LogInformation("Client channel server push message response write fail,channel is not writable!");
                                 ReferenceCountUtil.Release(msg);
                             }
@@ -61,20 +65,20 @@ namespace FluentSocket.Handlers
                 else
                 {
                     _logger.LogError("Client can't find push message handler!");
-                    if (ctx.Channel.IsWritable)
+                    if (_ctx.Channel.IsWritable)
                     {
                         var pushResponseMessage = PushResponseMessage.BuildExceptionPushResponse(msg, "Client can't find push message handler");
-                        ctx.WriteAndFlushAsync(pushResponseMessage);
+                        _ctx.WriteAndFlushAsync(pushResponseMessage);
                     }
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError($"{nameof(PushHandler)},There is some error when handle server push message! Exception:{ex.Message}", ex);
-                if (ctx.Channel.IsWritable)
+                if (_ctx.Channel.IsWritable)
                 {
                     var pushResponseMessage = PushResponseMessage.BuildExceptionPushResponse(msg, ex.Message);
-                    ctx.WriteAndFlushAsync(pushResponseMessage);
+                    _ctx.WriteAndFlushAsync(pushResponseMessage);
                 }
             }
         }

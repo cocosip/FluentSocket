@@ -39,7 +39,7 @@ namespace FluentSocket.Handlers
                             }
                             if (_ctx.Channel.IsWritable)
                             {
-                                _ctx.WriteAndFlushAsync(t.Result);
+                                _ctx.WriteAndFlushAsync(t.Result).Wait();
                             }
                             else
                             {
@@ -63,20 +63,20 @@ namespace FluentSocket.Handlers
                 else
                 {
                     _logger.LogError($"Server can't find request code handler! Request code is:{msg.Code}");
-                    if (ctx.Channel.IsWritable)
+                    if (_ctx.Channel.IsWritable)
                     {
                         var response = ResponseMessage.BuildExceptionResponse(msg, $"Server can't find request code handler! Request code is:{msg.Code}");
-                        ctx.WriteAndFlushAsync(response);
+                        _ctx.WriteAndFlushAsync(response);
                     }
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError($"{nameof(RequestHandler)},There is some error when handle remoting request! Exception:{ex.Message}", ex);
-                if (ctx.Channel.IsWritable)
+                if (_ctx.Channel.IsWritable)
                 {
                     var response = ResponseMessage.BuildExceptionResponse(msg, $"There is some error when handle remoting request! Exception:{ex.Message}");
-                    ctx.WriteAndFlushAsync(response);
+                    _ctx.WriteAndFlushAsync(response);
                 }
             }
         }

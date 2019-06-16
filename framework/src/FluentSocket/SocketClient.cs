@@ -40,17 +40,16 @@ namespace FluentSocket
         private bool _isRunning = false;
         private int _reConnectAttempt = 0;
         private readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
+        private readonly ManualResetEventSlim _manualResetEventSlim = new ManualResetEventSlim(false);
         private readonly Dictionary<int, IPushMessageHandler> _pushMessageHandlerDict;
         private readonly ConcurrentDictionary<string, ResponseFuture> _responseFutureDict;
 
         public SocketClient(IServiceProvider provider, ILoggerFactory loggerFactory, IScheduleService scheduleService, ClientSetting setting)
         {
-            //ManualResetEventSlim
             _provider = provider;
             _logger = loggerFactory.CreateLogger(FluentSocketSettings.LoggerName);
             _scheduleService = scheduleService;
             _setting = setting;
-
             Name = "SocketClient-" + ObjectId.GenerateNewStringId();
             ServerIPAddress = _setting.ServerEndPoint.ToIPv4Address();
             _pushMessageHandlerDict = new Dictionary<int, IPushMessageHandler>();
@@ -112,7 +111,7 @@ namespace FluentSocket
                         //Set request response
                         pipeline.AddLast("request-response", _provider.CreateInstance<ResponseMessageHandler>(new Action<ResponseMessage>(HandleResponseMessage)));
 
-                        pipeline.AddLast("channel-watcher", _provider.CreateInstance<ChannelWatcherHandler>());
+                        pipeline.AddLast("channel-watcher", _provider.CreateInstance<ChannelWatcherHandler>(new Action<bool>(ChannelWritableChanged)));
 
                         //PushMessage Code Handler
                         AddPushMessageHandler(pipeline);
@@ -141,8 +140,6 @@ namespace FluentSocket
             }
         }
 
-
-
         /// <summary>Close
         /// </summary>
         public async Task CloseAsync()
@@ -163,36 +160,34 @@ namespace FluentSocket
             }
         }
 
-
-
         /// <summary>Send message, return ResponseMessage
         /// </summary>
-        public Task<ResponseMessage> SendAsync(RequestMessage request, int timeoutMillis, int thresholdCount = 500)
+        public Task<ResponseMessage> SendAsync(RequestMessage request, int timeoutMillis, int thresholdCount = 1000, bool sendWait = true)
         {
             CheckChannel(_clientChannel);
-
-            //var s = FlowControlUtil.CalculateFlowControlTimeMilliseconds(_responseFutureDict.Count, thresholdCount);
-            //if (s > 0)
-            //{
-            //    Thread.Sleep(s);
-            //}
+            if (!_clientChannel.IsWritable)
+            {
+                _manualResetEventSlim.Wait();
+            }
+            var sleepMilliseconds = FlowControlUtil.CalculateFlowControlTimeMilliseconds(_responseFutureDict.Count, thresholdCount);
+            if (sleepMilliseconds > 0)
+            {
+                Thread.Sleep(sleepMilliseconds);
+            }
             var taskCompletionSource = new TaskCompletionSource<ResponseMessage>();
             var responseFuture = new ResponseFuture(request, timeoutMillis, taskCompletionSource);
             if (!_responseFutureDict.TryAdd(request.Id, responseFuture))
             {
                 throw new Exception($"Add remoting request response future failed. request id:{request.Id}");
             }
-
-            if (!_clientChannel.IsWritable)
+            if (sendWait)
             {
-                _logger.LogInformation("Channel is not writable!");
                 _clientChannel.WriteAndFlushAsync(request).Wait();
             }
             else
             {
                 _clientChannel.WriteAndFlushAsync(request);
             }
-
             return taskCompletionSource.Task;
         }
 
@@ -248,15 +243,15 @@ namespace FluentSocket
             }
         }
 
-        private void ChannelWritableChanged(bool isWritable)
+        private void ChannelWritableChanged(bool isWriteable)
         {
-            if (!isWritable)
+            if (isWriteable)
             {
-
+                _manualResetEventSlim.Set();
             }
             else
             {
-
+                _manualResetEventSlim.Reset();
             }
         }
 

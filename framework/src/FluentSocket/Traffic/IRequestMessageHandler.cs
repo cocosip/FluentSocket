@@ -7,4 +7,5 @@ namespace FluentSocket.Traffic
     {
         ResponseMessage HandleRequest(RequestMessage request);
     }
+
 }

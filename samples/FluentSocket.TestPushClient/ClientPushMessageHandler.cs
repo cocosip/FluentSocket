@@ -16,11 +16,11 @@ namespace FluentSocket.TestPushClient
             _performanceService = performanceService;
         }
 
-        public Task<PushResponseMessage> HandlePushMessageAsync(PushMessage pushMessage)
+        public PushResponseMessage HandlePushMessage(PushMessage pushMessage)
         {
             _performanceService.IncrementKeyCount("Async", (DateTime.Now - pushMessage.CreatedTime).TotalMilliseconds);
             var pushResponseMessage = new PushResponseMessage(105, Encoding.UTF8.GetBytes("hello"), pushMessage.Id, pushMessage.Code, pushMessage.CreatedTime);
-            return Task.FromResult(pushResponseMessage);
+            return pushResponseMessage;
         }
     }
 }

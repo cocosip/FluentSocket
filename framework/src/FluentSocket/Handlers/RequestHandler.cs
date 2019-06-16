@@ -5,12 +5,14 @@ using FluentSocket.Traffic;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace FluentSocket.Handlers
 {
     public class RequestHandler : SimpleChannelInboundHandler<RequestMessage>
     {
+        private readonly ManualResetEventSlim _manualResetEventSlim = new ManualResetEventSlim(false);
         private readonly ILogger _logger;
         private IDictionary<int, IRequestMessageHandler> _requestMessageHandlerDict;
         private readonly ServerSetting _setting;
@@ -21,14 +23,18 @@ namespace FluentSocket.Handlers
             _setting = setting;
         }
 
-        //public override void ChannelWritabilityChanged(IChannelHandlerContext context)
-        //{
-        //    if (context.Channel.IsWritable)
-        //    {
-        //        context.Flush();
-        //    }
-        //    base.ChannelWritabilityChanged(context);
-        //}
+        public override void ChannelWritabilityChanged(IChannelHandlerContext context)
+        {
+            if (context.Channel.IsWritable)
+            {
+                _manualResetEventSlim.Set();
+            }
+            else
+            {
+                _manualResetEventSlim.Reset();
+            }
+            base.ChannelWritabilityChanged(context);
+        }
         protected override void ChannelRead0(IChannelHandlerContext ctx, RequestMessage msg)
         {
             try
@@ -36,38 +42,33 @@ namespace FluentSocket.Handlers
                 if (_requestMessageHandlerDict.TryGetValue(msg.Code, out IRequestMessageHandler handler))
                 {
 
-                    //if (_setting.EnableAsyncRequestHandler)
-                    //{
-                    //    Task.Run(() =>
-                    //    {
-                    //        if (!ctx.Channel.IsWritable)
-                    //        {
-                    //            _logger.LogInformation("CurrrentChannel is not writable!");
-                    //        }
-                    //        var response = handler.HandleRequest(msg);
-                    //        ctx.WriteAndFlushAsync(response);
-                    //    });
-                    //}
-                    //else
-                    //{
-                    //    var response = handler.HandleRequest(msg);
-                    //    ctx.WriteAndFlushAsync(response);
-                    //}
-                    var response = handler.HandleRequest(msg);
-                    ctx.WriteAndFlushAsync(response);
+                    if (_setting.EnableAsyncRequestHandler)
+                    {
+                        Task.Run(() =>
+                        {
+                            var response = handler.HandleRequest(msg);
+                            WriteAndFlush(ctx, response);
+                        });
+                    }
+                    else
+                    {
+                        var response = handler.HandleRequest(msg);
+                        WriteAndFlush(ctx, response);
+                    }
+
                 }
                 else
                 {
                     _logger.LogError($"Server can't find request code handler! Request code is:{msg.Code}");
                     var response = ResponseMessage.BuildExceptionResponse(msg, $"Server can't find request code handler! Request code is:{msg.Code}");
-                    ctx.WriteAndFlushAsync(response);
+                    WriteAndFlush(ctx, response);
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError($"{nameof(RequestHandler)},There is some error when handle remoting request! Exception:{ex.Message}", ex);
                 var response = ResponseMessage.BuildExceptionResponse(msg, $"Server can't find request code handler! Request code is:{msg.Code}");
-                ctx.WriteAndFlushAsync(response);
+                WriteAndFlush(ctx, response);
             }
         }
 
@@ -85,6 +86,15 @@ namespace FluentSocket.Handlers
             context.CloseAsync();
         }
         public override void ChannelReadComplete(IChannelHandlerContext context) => context.Flush();
+
+        private void WriteAndFlush(IChannelHandlerContext context, ResponseMessage response)
+        {
+            if (!context.Channel.IsWritable)
+            {
+                _manualResetEventSlim.Wait();
+            }
+            context.WriteAndFlushAsync(response);
+        }
 
     }
 }

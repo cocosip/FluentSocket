@@ -20,6 +20,7 @@ namespace FluentSocket.Handlers
             if (msg.MessageType == MessageType.Response)
             {
                 _setResponseAction(msg);
+                //Task.Run(() => _setResponseAction(msg));
             }
             ctx.FireChannelRead(msg);
         }

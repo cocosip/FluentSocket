@@ -2,7 +2,7 @@
 {
     public static class FlowControlUtil
     {
-        public static int CalculateFlowControlTimeMilliseconds(int pendingCount, int thresholdCount = 1000, int baseWaitMilliseconds = 1, int maxWaitMilliseconds = 20)
+        public static int CalculateFlowControlTimeMilliseconds(int pendingCount, int thresholdCount = 500, int baseWaitMilliseconds = 1, int maxWaitMilliseconds =100)
         {
             var exceedCount = pendingCount - thresholdCount;
             exceedCount = exceedCount <= 0 ? 1 : exceedCount;

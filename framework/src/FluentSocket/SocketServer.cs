@@ -29,7 +29,6 @@ namespace FluentSocket
         private readonly IScheduleService _scheduleService;
         private readonly IChannelManager _channelManager;
         private readonly ServerSetting _setting;
-
         public string Name { get; }
         public string LocalIPAddress { get; }
         public bool IsRunning { get { return _isRunning; } }
@@ -37,6 +36,7 @@ namespace FluentSocket
         private IEventLoopGroup _workerGroup = null;
         private IChannel _boundChannel;
         private bool _isRunning = false;
+        private readonly ManualResetEventSlim _manualResetEventSlim = new ManualResetEventSlim(false);
         private readonly IDictionary<int, IRequestMessageHandler> _requestMessageHandlerDict;
         private readonly ConcurrentDictionary<string, PushResponseFuture> _pushResponseFutureDict;
 
@@ -51,11 +51,8 @@ namespace FluentSocket
             _setting.OnChannelActiveHandler = setting.OnChannelActiveHandler == null ? f => { } : setting.OnChannelActiveHandler;
             _setting.OnChannelInActiveHandler = setting.OnChannelInActiveHandler == null ? f => { } : setting.OnChannelInActiveHandler;
 
-
-
             Name = "SocketServer-" + ObjectId.GenerateNewStringId();
             LocalIPAddress = _setting.ListeningEndPoint.ToStringAddress();
-
             _requestMessageHandlerDict = new Dictionary<int, IRequestMessageHandler>();
             _requestMessageHandlerDict.Add(RequestCodes.HeartBeat, _provider.CreateInstance<HeartbeatRequestMessageHander>());
             _pushResponseFutureDict = new ConcurrentDictionary<string, PushResponseFuture>();
@@ -182,7 +179,7 @@ namespace FluentSocket
 
         /// <summary>Push message to single client
         /// </summary>
-        public Task<PushResponseMessage> PushMessageToSingleClientAsync(PushMessage pushMessage, Func<ChannelInfo, bool> predicate, int timeoutMillis, int thresholdCount = 500)
+        public Task<PushResponseMessage> PushMessageToSingleClientAsync(PushMessage pushMessage, Func<ChannelInfo, bool> predicate, int timeoutMillis = 5000, int thresholdCount = 500)
         {
             var channel = _channelManager.FindFirstChannel(predicate);
             CheckChannel(channel);
@@ -190,10 +187,10 @@ namespace FluentSocket
             {
                 Thread.Sleep(5);
             }
-            var s = FlowControlUtil.CalculateFlowControlTimeMilliseconds(_pushResponseFutureDict.Count, thresholdCount);
-            if (s > 0)
+            var sleepMilliseconds = FlowControlUtil.CalculateFlowControlTimeMilliseconds(_pushResponseFutureDict.Count, thresholdCount);
+            if (sleepMilliseconds > 0)
             {
-                Thread.Sleep(s);
+                Thread.Sleep(sleepMilliseconds);
             }
             var taskCompletionSource = new TaskCompletionSource<PushResponseMessage>();
             var pushResponseFuture = new PushResponseFuture(pushMessage, timeoutMillis, taskCompletionSource);
@@ -214,10 +211,10 @@ namespace FluentSocket
             pushMessage.NeedAck = false;
 
             var channels = _channelManager.FindChannels(predicate);
-            var s = FlowControlUtil.CalculateFlowControlTimeMilliseconds(_pushResponseFutureDict.Count, thresholdCount);
-            if (s > 0)
+            var sleepMilliseconds = FlowControlUtil.CalculateFlowControlTimeMilliseconds(_pushResponseFutureDict.Count, thresholdCount);
+            if (sleepMilliseconds > 0)
             {
-                Thread.Sleep(s);
+                Thread.Sleep(sleepMilliseconds);
             }
             foreach (var channel in channels)
             {

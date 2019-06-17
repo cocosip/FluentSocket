@@ -42,7 +42,7 @@ namespace FluentSocket.TestClient
             var index = 0;
             var sendBytes = new byte[1024];
             //Encoding.UTF8.GetBytes("Hello,I'm client!");
-            _performanceService.IncrementKeyCount(_mode, 0);
+            //_performanceService.IncrementKeyCount(_mode, 0);
             for (var i = 0; i < 1; i++)
             {
                 var task = Task.Factory.StartNew(() =>
@@ -63,7 +63,7 @@ namespace FluentSocket.TestClient
                             //    _logger.LogInformation("ResponseException,ResponseCode:{0}", sendTask.Result.ResponseCode);
                             //}
 
-                            _client.SendAsync(request, 10000, 1000, true).ContinueWith(t =>
+                            _client.SendAsync(request, 10000, 2000, false).ContinueWith(t =>
                             {
                                 if (t.Exception != null)
                                 {

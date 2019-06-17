@@ -34,7 +34,7 @@ namespace FluentSocket.TestServer
                 var response = new ResponseMessage(101, Encoding.UTF8.GetBytes("Hello," + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss fff")), request.Id, request.Code, request.CreatedTime);
                 //_logger.LogInformation("RequestId:{0},TimeSpan:{1}",request.Id, (DateTime.Now - request.CreatedTime).TotalMilliseconds);
                 _performanceService.IncrementKeyCount("Async", (DateTime.Now - request.CreatedTime).TotalMilliseconds);
-                Thread.Sleep(10);
+                //Thread.Sleep(10);
                 return response;
             });
 

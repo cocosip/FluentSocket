@@ -93,7 +93,6 @@ namespace FluentSocket.Handlers
             _logger.LogError(exception.Message, exception);
             context.CloseAsync();
         }
-        public override void ChannelReadComplete(IChannelHandlerContext context) => context.Flush();
 
         private void WriteAndFlush(IChannelHandlerContext context, ResponseMessage response)
         {

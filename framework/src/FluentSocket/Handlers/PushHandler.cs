@@ -100,9 +100,6 @@ namespace FluentSocket.Handlers
             context.CloseAsync();
         }
 
-        public override void ChannelReadComplete(IChannelHandlerContext context) => context.Flush();
-
-
         private void WriteAndFlush(IChannelHandlerContext context, PushResponseMessage response)
         {
             if (!context.Channel.IsWritable)

@@ -22,7 +22,7 @@ namespace FluentSocket
 
         /// <summary>Enable async to handle push handler
         /// </summary>
-        public bool EnableAsyncPushHandler { get; set; } = true;
+        public bool EnableAsyncPushHandler { get; set; } = false;
 
         /// <summary>Keep alive
         /// </summary>

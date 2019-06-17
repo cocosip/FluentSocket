@@ -50,14 +50,23 @@ namespace FluentSocket.Handlers
                     {
                         Task.Run(() =>
                         {
-                            var pushResponseMessage = handler.HandlePushMessage(msg);
-                            WriteAndFlush(ctx, pushResponseMessage);
+                            var pushResponseMessageTask = handler.HandlePushMessageAsync(msg);
+                            pushResponseMessageTask.ContinueWith(t =>
+                            {
+                                if (t.Exception == null && t.IsCompleted)
+                                {
+                                    WriteAndFlush(ctx, t.Result);
+                                }
+                            }, CancellationToken.None);
                         });
                     }
                     else
                     {
-                        var response = handler.HandlePushMessage(msg);
-                        WriteAndFlush(ctx, response);
+                        Task.Run(() =>
+                        {
+                            var pushResponseMessage = handler.HandlePushMessage(msg);
+                            WriteAndFlush(ctx, pushResponseMessage);
+                        });
                     }
                 }
                 else
@@ -73,6 +82,11 @@ namespace FluentSocket.Handlers
                 var pushResponseMessage = PushResponseMessage.BuildExceptionPushResponse(msg, ex.Message);
                 WriteAndFlush(ctx, pushResponseMessage);
             }
+            finally
+            {
+                ReferenceCountUtil.SafeRelease(msg);
+            }
+
         }
 
         /// <summary>Add push handler to dict.

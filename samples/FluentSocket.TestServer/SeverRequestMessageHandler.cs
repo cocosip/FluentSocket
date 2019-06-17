@@ -3,12 +3,10 @@ using FluentSocket.TestCommon.Performance;
 using FluentSocket.Traffic;
 using System;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace FluentSocket.TestServer
 {
-    public class SeverRequestMessageHandler : IRequestMessageHandler
+    public class SeverRequestMessageHandler : BaseRequestMessageHandler
     {
         private readonly IPerformanceService _performanceService;
 
@@ -17,7 +15,7 @@ namespace FluentSocket.TestServer
             _performanceService = performanceService;
         }
 
-        public ResponseMessage HandleRequest(RequestMessage request)
+        public override ResponseMessage HandleRequest(RequestMessage request)
         {
             var response = new ResponseMessage(101, Encoding.UTF8.GetBytes("Hello," + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss fff")), request.Id, request.Code, request.CreatedTime);
             //_logger.LogInformation("RequestId:{0},TimeSpan:{1}",request.Id, (DateTime.Now - request.CreatedTime).TotalMilliseconds);

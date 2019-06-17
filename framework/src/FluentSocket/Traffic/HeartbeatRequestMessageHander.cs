@@ -4,9 +4,9 @@ using FluentSocket.Utils;
 
 namespace FluentSocket.Traffic
 {
-    public class HeartbeatRequestMessageHander : IRequestMessageHandler
+    public class HeartbeatRequestMessageHander : BaseRequestMessageHandler
     {
-        public ResponseMessage HandleRequest(RequestMessage request)
+        public override ResponseMessage HandleRequest(RequestMessage request)
         {
             var response = new ResponseMessage(ResponseCodes.HeartBeatReply, ByteUtil.EmptyBytes, request.Id, request.Code, request.CreatedTime);
             return response;

@@ -22,7 +22,7 @@ namespace FluentSocket
 
         /// <summary>Enable async to handle request handler
         /// </summary>
-        public bool EnableAsyncRequestHandler { get; set; } = true;
+        public bool EnableAsyncRequestHandler { get; set; } = false;
 
         /// <summary>SoBacklog
         /// </summary>

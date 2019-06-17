@@ -6,5 +6,7 @@ namespace FluentSocket.Traffic
     public interface IPushMessageHandler
     {
         PushResponseMessage HandlePushMessage(PushMessage pushMessage);
+
+        Task<PushResponseMessage> HandlePushMessageAsync(PushMessage pushMessage);
     }
 }

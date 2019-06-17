@@ -46,16 +46,24 @@ namespace FluentSocket.Handlers
                     {
                         Task.Run(() =>
                         {
-                            var response = handler.HandleRequest(msg);
-                            WriteAndFlush(ctx, response);
+                            var responseTask = handler.HandleRequestAsync(msg);
+                            responseTask.ContinueWith(t =>
+                            {
+                                if (t.Exception == null && t.IsCompleted)
+                                {
+                                    WriteAndFlush(ctx, t.Result);
+                                }
+                            }, CancellationToken.None);
                         });
                     }
                     else
                     {
-                        var response = handler.HandleRequest(msg);
-                        WriteAndFlush(ctx, response);
+                        Task.Run(() =>
+                        {
+                            var response = handler.HandleRequest(msg);
+                            WriteAndFlush(ctx, response);
+                        });
                     }
-
                 }
                 else
                 {
@@ -69,6 +77,10 @@ namespace FluentSocket.Handlers
                 _logger.LogError($"{nameof(RequestHandler)},There is some error when handle remoting request! Exception:{ex.Message}", ex);
                 var response = ResponseMessage.BuildExceptionResponse(msg, $"Server can't find request code handler! Request code is:{msg.Code}");
                 WriteAndFlush(ctx, response);
+            }
+            finally
+            {
+                ReferenceCountUtil.SafeRelease(msg);
             }
         }
 

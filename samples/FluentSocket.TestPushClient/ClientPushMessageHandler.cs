@@ -3,11 +3,10 @@ using FluentSocket.TestCommon.Performance;
 using FluentSocket.Traffic;
 using System;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace FluentSocket.TestPushClient
 {
-    public class ClientPushMessageHandler : IPushMessageHandler
+    public class ClientPushMessageHandler : BasePushMessageHandler
     {
         private readonly IPerformanceService _performanceService;
 
@@ -16,7 +15,7 @@ namespace FluentSocket.TestPushClient
             _performanceService = performanceService;
         }
 
-        public PushResponseMessage HandlePushMessage(PushMessage pushMessage)
+        public override PushResponseMessage HandlePushMessage(PushMessage pushMessage)
         {
             _performanceService.IncrementKeyCount("Async", (DateTime.Now - pushMessage.CreatedTime).TotalMilliseconds);
             var pushResponseMessage = new PushResponseMessage(105, Encoding.UTF8.GetBytes("hello"), pushMessage.Id, pushMessage.Code, pushMessage.CreatedTime);

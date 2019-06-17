@@ -37,7 +37,7 @@ namespace FluentSocket.TestClient
 
         static void StartSendMessageTest()
         {
-             
+
             //Task.Delay(3000).Wait();
             var index = 0;
             var sendBytes = new byte[1024];
@@ -63,24 +63,24 @@ namespace FluentSocket.TestClient
                             //    _logger.LogInformation("ResponseException,ResponseCode:{0}", sendTask.Result.ResponseCode);
                             //}
 
-                            _client.SendAsync(request, 10000, 5000).ContinueWith(t =>
-                             {
-                                 if (t.Exception != null)
-                                 {
-                                     _logger.LogError(t.Exception, t.Exception.Message);
-                                     return;
-                                 }
-                                 var response = t.Result;
-                                 //_logger.LogInformation("接收服务器端返回:{0}" + Encoding.UTF8.GetString(response.Body));
-                                 if (response.ResponseCode != (int)ResponseCodes.HasException)
-                                 {
-                                     _performanceService.IncrementKeyCount(_mode, (DateTime.Now - response.RequestTime).TotalMilliseconds);
-                                 }
-                                 else
-                                 {
-                                     _logger.LogInformation("ResponseException,ResponseCode:{0}", response.ResponseCode);
-                                 }
-                             });
+                            _client.SendAsync(request, 10000, 1000, true).ContinueWith(t =>
+                            {
+                                if (t.Exception != null)
+                                {
+                                    _logger.LogError(t.Exception, t.Exception.Message);
+                                    return;
+                                }
+                                var response = t.Result;
+                                //_logger.LogInformation("接收服务器端返回:{0}" + Encoding.UTF8.GetString(response.Body));
+                                if (response.ResponseCode != (int)ResponseCodes.HasException)
+                                {
+                                    _performanceService.IncrementKeyCount(_mode, (DateTime.Now - response.RequestTime).TotalMilliseconds);
+                                }
+                                else
+                                {
+                                    _logger.LogInformation("ResponseException,ResponseCode:{0}", response.ResponseCode);
+                                }
+                            });
                         }
                         catch (Exception ex)
                         {

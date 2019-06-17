@@ -44,16 +44,12 @@ namespace FluentSocket.Handlers
 
                     if (_setting.EnableAsyncRequestHandler)
                     {
-                        Task.Run(() =>
+                        handler.HandleRequestAsync(msg).ContinueWith(t =>
                         {
-                            var responseTask = handler.HandleRequestAsync(msg);
-                            responseTask.ContinueWith(t =>
+                            if (t.Exception == null && t.IsCompleted)
                             {
-                                if (t.Exception == null && t.IsCompleted)
-                                {
-                                    WriteAndFlush(ctx, t.Result);
-                                }
-                            }, CancellationToken.None);
+                                WriteAndFlush(ctx, t.Result);
+                            }
                         });
                     }
                     else

@@ -48,16 +48,13 @@ namespace FluentSocket.Handlers
 
                     if (_setting.EnableAsyncPushHandler)
                     {
-                        Task.Run(() =>
+
+                        handler.HandlePushMessageAsync(msg).ContinueWith(t =>
                         {
-                            var pushResponseMessageTask = handler.HandlePushMessageAsync(msg);
-                            pushResponseMessageTask.ContinueWith(t =>
+                            if (t.Exception == null && t.IsCompleted)
                             {
-                                if (t.Exception == null && t.IsCompleted)
-                                {
-                                    WriteAndFlush(ctx, t.Result);
-                                }
-                            }, CancellationToken.None);
+                                WriteAndFlush(ctx, t.Result);
+                            }
                         });
                     }
                     else

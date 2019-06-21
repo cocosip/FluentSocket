@@ -43,8 +43,8 @@ namespace FluentSocket.TestPushClient
             //客户端
             var setting = new ClientSetting()
             {
-                WriteBufferLowWaterMark = 1024 * 1024 * 4,
-                WriteBufferHighWaterMark = 1024 * 1024 * 2,
+                WriteBufferLowWaterMark = 1024 * 1024 * 1,
+                WriteBufferHighWaterMark = 1024 * 1024 * 4,
                 SoRcvbuf = 1024 * 1024 * 2,
                 SoSndbuf = 1024 * 1024 * 2,
                 IsSsl = false,

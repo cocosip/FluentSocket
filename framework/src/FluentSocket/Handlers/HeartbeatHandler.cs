@@ -22,9 +22,9 @@ namespace FluentSocket.Handlers
             if (evt is IdleStateEvent)
             {
                 var idleStateEvent = (IdleStateEvent)evt;
-                if (idleStateEvent.State == IdleState.ReaderIdle)
+                if (idleStateEvent.State == IdleState.AllIdle)
                 {
-                    _logger.LogInformation($"Heartbeat, event type:{evt.GetType()},status:{idleStateEvent.State}");
+                    _logger.LogDebug($"Heartbeat, event type:{evt.GetType()},status:{idleStateEvent.State}");
                     var heartbeat = new RequestMessage(RequestCodes.HeartBeat, ByteUtil.EmptyBytes);
                     //release?
                     ReferenceCountUtil.Release(idleStateEvent);

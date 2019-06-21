@@ -6,9 +6,9 @@ namespace FluentSocket.Codecs
 {
     public class ResponseMessage : Message
     {
-        public int ResponseCode { get; set; }
+        public short ResponseCode { get; set; }
         public string RequestId { get; set; }
-        public int RequestCode { get; set; }
+        public short RequestCode { get; set; }
         public DateTime RequestTime { get; set; }
 
 
@@ -17,7 +17,7 @@ namespace FluentSocket.Codecs
 
         }
 
-        public ResponseMessage(int responseCode, byte[] body, string requestId, int requestCode, DateTime requestTime) : base(ObjectId.GenerateNewStringId(), MessageType.Response, body, DateTime.Now, null)
+        public ResponseMessage(short responseCode, byte[] body, string requestId, short requestCode, DateTime requestTime) : base(ObjectId.GenerateNewStringId(), MessageType.Response, body, DateTime.Now, null)
         {
             ResponseCode = responseCode;
             RequestId = requestId;

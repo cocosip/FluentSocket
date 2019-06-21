@@ -9,7 +9,7 @@
 
         }
 
-        public PushMessage(int code, byte[] body, bool needAck = true) : base(code, body)
+        public PushMessage(short code, byte[] body, bool needAck = true) : base(code, body)
         {
             NeedAck = true;
             MessageType = MessageType.PushRequest;

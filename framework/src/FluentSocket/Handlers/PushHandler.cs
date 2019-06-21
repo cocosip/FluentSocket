@@ -46,25 +46,21 @@ namespace FluentSocket.Handlers
                 {
                     _logger.LogDebug($"Handle ServerPushMessage,Code is :{msg.Code},PushMessageId:{msg.Id}");
 
-                    if (_setting.EnableAsyncPushHandler)
+                    handler.HandlePushMessageAsync(msg).ContinueWith(t =>
                     {
+                        if (t.Exception == null)
+                        {
+                            WriteAndFlush(ctx, t.Result);
+                        }
+                        else
+                        {
 
-                        handler.HandlePushMessageAsync(msg).ContinueWith(t =>
-                        {
-                            if (t.Exception == null && t.IsCompleted)
-                            {
-                                WriteAndFlush(ctx, t.Result);
-                            }
-                        });
-                    }
-                    else
-                    {
-                        Task.Run(() =>
-                        {
-                            var pushResponseMessage = handler.HandlePushMessage(msg);
-                            WriteAndFlush(ctx, pushResponseMessage);
-                        });
-                    }
+                            var response = PushResponseMessage.BuildExceptionPushResponse(msg, t.Exception.Message);
+                            WriteAndFlush(ctx, t.Result);
+                        }
+                    });
+
+
                 }
                 else
                 {

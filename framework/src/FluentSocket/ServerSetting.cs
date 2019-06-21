@@ -20,10 +20,6 @@ namespace FluentSocket
         /// </summary>
         public int WorkGroupEventLoopCount { get; set; } = 1;
 
-        /// <summary>Enable async to handle request handler
-        /// </summary>
-        public bool EnableAsyncRequestHandler { get; set; } = false;
-
         /// <summary>SoBacklog
         /// </summary>
         public int SoBacklog { get; set; } = 128;

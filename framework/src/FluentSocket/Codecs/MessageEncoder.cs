@@ -61,18 +61,18 @@ namespace FluentSocket.Codecs
                 //Id  + Body +Extra +(length:4 *3),12为3个int的长度
                 var byteBufferLength = idBytes.Length + requestMessage.Extra.Length + requestMessage.Body.Length + 12;
 
-                //MessageType(2) + Code(4) + Time(8)
-                var fixedLength = 14;
+                //MessageType(1) + Code(2) + Time(8)
+                var fixedLength = 11;
 
                 buffer = bufferAllocator.Buffer(byteBufferLength + fixedLength);
                 //messageType
-                buffer.WriteShort((short)requestMessage.MessageType);
+                buffer.WriteByte((byte)requestMessage.MessageType);
                 //write id
                 buffer.WriteInt(idBytes.Length);
                 buffer.WriteBytes(idBytes);
 
                 //write code
-                buffer.WriteInt(requestMessage.Code);
+                buffer.WriteShort(requestMessage.Code);
 
                 //write body
                 buffer.WriteInt(requestMessage.Body.Length);
@@ -117,21 +117,21 @@ namespace FluentSocket.Codecs
                 //Id + Body +Extra + (length: 4*3)
                 var byteBufferLength = idBytes.Length + responseMessage.Extra.Length + responseMessage.Body.Length + 12;
 
-                //MessageType(2) + Code(4) + Time(8)
-                var fixedLength = 14;
+                //MessageType(1) + Code(2) + Time(8)
+                var fixedLength = 11;
 
-                //RequestId+RequestCode(4) +RequestTime(8)
-                var requestLength = requestIdBytes.Length + 4 + 4 + 8;
+                //RequestId+RequestCode(2) +RequestTime(8)
+                var requestLength = requestIdBytes.Length + 4 + 2 + 8;
 
                 buffer = bufferAllocator.Buffer(byteBufferLength + fixedLength + requestLength);
 
                 //messageType
-                buffer.WriteShort((short)responseMessage.MessageType);
+                buffer.WriteByte((short)responseMessage.MessageType);
                 //write id
                 buffer.WriteInt(idBytes.Length);
                 buffer.WriteBytes(idBytes);
                 //write response code
-                buffer.WriteInt(responseMessage.ResponseCode);
+                buffer.WriteShort(responseMessage.ResponseCode);
                 //write body
                 buffer.WriteInt(responseMessage.Body.Length);
                 buffer.WriteBytes(responseMessage.Body);
@@ -145,7 +145,7 @@ namespace FluentSocket.Codecs
                 buffer.WriteInt(requestIdBytes.Length);
                 buffer.WriteBytes(requestIdBytes);
                 //write response.requestCode
-                buffer.WriteInt(responseMessage.RequestCode);
+                buffer.WriteShort(responseMessage.RequestCode);
                 //write response.requestTime
                 buffer.WriteLong(responseMessage.RequestTime.Ticks);
 
@@ -181,18 +181,18 @@ namespace FluentSocket.Codecs
                 //Id  + Body +Extra +(length:4 *3),12为3个int的长度
                 var byteBufferLength = idBytes.Length + pushMessage.Extra.Length + pushMessage.Body.Length + 12;
 
-                //MessageType(2) + Code(4) +NeedAck(2)+ Time(8)
-                var fixedLength = 16;
+                //MessageType(1) + Code(2) +NeedAck(2)+ Time(8)
+                var fixedLength = 13;
 
                 buffer = bufferAllocator.Buffer(byteBufferLength + fixedLength);
                 //messageType
-                buffer.WriteShort((short)pushMessage.MessageType);
+                buffer.WriteByte((short)pushMessage.MessageType);
                 //write id
                 buffer.WriteInt(idBytes.Length);
                 buffer.WriteBytes(idBytes);
 
                 //write code
-                buffer.WriteInt(pushMessage.Code);
+                buffer.WriteShort(pushMessage.Code);
                 //write needAck
                 buffer.WriteBoolean(pushMessage.NeedAck);
 
@@ -239,21 +239,21 @@ namespace FluentSocket.Codecs
                 //Id + Body +Extra + (length: 4*3)
                 var byteBufferLength = idBytes.Length + pushResponseMessage.Extra.Length + pushResponseMessage.Body.Length + 12;
 
-                //MessageType(2) + Code(4) + Time(8)
-                var fixedLength = 14;
+                //MessageType(1) + Code(2) + Time(8)
+                var fixedLength = 11;
 
-                //RequestId+RequestCode(4) +RequestTime(8)
-                var requestLength = requestIdBytes.Length + 4 + 4 + 8;
+                //RequestId+RequestCode(2) +RequestTime(8)
+                var requestLength = requestIdBytes.Length + 4 + 2 + 8;
 
                 buffer = bufferAllocator.Buffer(byteBufferLength + fixedLength + requestLength);
 
                 //messageType
-                buffer.WriteShort((short)pushResponseMessage.MessageType);
+                buffer.WriteByte((byte)pushResponseMessage.MessageType);
                 //write id
                 buffer.WriteInt(idBytes.Length);
                 buffer.WriteBytes(idBytes);
                 //write response code
-                buffer.WriteInt(pushResponseMessage.ResponseCode);
+                buffer.WriteShort(pushResponseMessage.ResponseCode);
                 //write body
                 buffer.WriteInt(pushResponseMessage.Body.Length);
                 buffer.WriteBytes(pushResponseMessage.Body);
@@ -267,7 +267,7 @@ namespace FluentSocket.Codecs
                 buffer.WriteInt(requestIdBytes.Length);
                 buffer.WriteBytes(requestIdBytes);
                 //write response.requestCode
-                buffer.WriteInt(pushResponseMessage.RequestCode);
+                buffer.WriteShort(pushResponseMessage.RequestCode);
                 //write response.requestTime
                 buffer.WriteLong(pushResponseMessage.RequestTime.Ticks);
 

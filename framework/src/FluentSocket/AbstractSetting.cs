@@ -18,21 +18,21 @@ namespace FluentSocket
         /// </summary>
         public int ScanTimeoutRequestInterval { get; set; } = 1000;
 
-        /// <summary>Enable heartbeat
-        /// </summary>
-        public bool EnableHeartbeat { get; set; } = false;
+        ///// <summary>Enable heartbeat
+        ///// </summary>
+        //public bool EnableHeartbeat { get; set; } = false;
 
-        /// <summary>Heartbeat read time (s)
-        /// </summary>
-        public int ReaderIdleTimeSeconds { get; set; } = 30;
+        ///// <summary>Heartbeat read time (s)
+        ///// </summary>
+        //public int ReaderIdleTimeSeconds { get; set; } = 30;
 
-        /// <summary>Heartbeat write time (s)
-        /// </summary>
-        public int WriterIdleTimeSeconds { get; set; } = 30;
+        ///// <summary>Heartbeat write time (s)
+        ///// </summary>
+        //public int WriterIdleTimeSeconds { get; set; } = 30;
 
-        /// <summary>Heartbeat all time (s)
-        /// </summary>
-        public int AllIdleTimeSeconds { get; set; } = 60;
+        ///// <summary>Heartbeat all time (s)
+        ///// </summary>
+        //public int AllIdleTimeSeconds { get; set; } = 60;
 
         /// <summary>Wait the handler execute time (ms)
         /// </summary>

@@ -115,19 +115,10 @@ namespace FluentSocket
                         pipeline.AddLast("framing-enc", new LengthFieldPrepender(4));
                         pipeline.AddLast("framing-dec", new LengthFieldBasedFrameDecoder(int.MaxValue, 0, 4, 0, 4));
 
-                        if (_setting.EnableHeartbeat)
-                        {
-                            pipeline.AddLast(new IdleStateHandler(_setting.ReaderIdleTimeSeconds, _setting.WriterIdleTimeSeconds, _setting.AllIdleTimeSeconds));
-                        }
                         //Server channel manager
                         pipeline.AddLast("channel-manager", _provider.CreateInstance<ServerChannelManagerHandler>(_channelManager, _setting.OnChannelActiveHandler, _setting.OnChannelInActiveHandler));
                         //RemotingMessage coder and encoder
                         pipeline.AddLast(new MessageDecoder(), new MessageEncoder());
-                        //Hearbeat sender
-                        if (_setting.EnableHeartbeat)
-                        {
-                            pipeline.AddLast("heartbeat", _provider.CreateInstance<HeartbeatHandler>());
-                        }
 
                         //Handle the response message
                         pipeline.AddLast("push-response", _provider.CreateInstance<PushResponseMessageHandler>(new Action<PushResponseMessage>(HandlePushResponseMessage)));
@@ -183,15 +174,15 @@ namespace FluentSocket
         {
             var channel = _channelManager.FindFirstChannel(predicate);
             CheckChannel(channel);
-            while (!channel.IsWritable)
-            {
-                Thread.Sleep(5);
-            }
-            var sleepMilliseconds = FlowControlUtil.CalculateFlowControlTimeMilliseconds(_pushResponseFutureDict.Count, thresholdCount);
-            if (sleepMilliseconds > 0)
-            {
-                Thread.Sleep(sleepMilliseconds);
-            }
+            //while (!channel.IsWritable)
+            //{
+            //    Thread.Sleep(1);
+            //}
+            //var sleepMilliseconds = FlowControlUtil.CalculateFlowControlTimeMilliseconds(_pushResponseFutureDict.Count, thresholdCount);
+            //if (sleepMilliseconds > 0)
+            //{
+            //    Thread.Sleep(sleepMilliseconds);
+            //}
             var taskCompletionSource = new TaskCompletionSource<PushResponseMessage>();
             var pushResponseFuture = new PushResponseFuture(pushMessage, timeoutMillis, taskCompletionSource);
 
@@ -218,10 +209,7 @@ namespace FluentSocket
             }
             foreach (var channel in channels)
             {
-                if (channel.IsWritable)
-                {
-                    channel.WriteAndFlushAsync(pushMessage).Wait(timeoutMillis);
-                }
+                channel.WriteAndFlushAsync(pushMessage).Wait(timeoutMillis);
             }
             return Task.FromResult(true);
         }

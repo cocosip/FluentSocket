@@ -79,8 +79,8 @@ namespace FluentSocket.TestClient
             };
 
             Task.Factory.StartNew(action, _client);
-            Task.Factory.StartNew(action, _client2);
-            Task.Factory.StartNew(action, _client3);
+            //Task.Factory.StartNew(action, _client2);
+            //Task.Factory.StartNew(action, _client3);
         }
 
 
@@ -105,7 +105,8 @@ namespace FluentSocket.TestClient
                 SoRcvbuf = 1024 * 1024 * 2,
                 SoSndbuf = 1024 * 1024 * 2,
                 IsSsl = false,
-                EnableHeartbeat = false,
+                EnableHeartbeat = true,
+                AllIdleTimeSeconds = 5,
                 EnableReConnect = true,
                 ReConnectDelaySeconds = 3,
                 ServerEndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 21000),

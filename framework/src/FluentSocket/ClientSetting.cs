@@ -7,6 +7,23 @@ namespace FluentSocket
 {
     public class ClientSetting : AbstractSetting
     {
+
+        /// <summary>Enable heartbeat
+        /// </summary>
+        public bool EnableHeartbeat { get; set; } = false;
+
+        /// <summary>Heartbeat read time (s)
+        /// </summary>
+        public int ReaderIdleTimeSeconds { get; set; } = 30;
+
+        /// <summary>Heartbeat write time (s)
+        /// </summary>
+        public int WriterIdleTimeSeconds { get; set; } = 30;
+
+        /// <summary>Heartbeat all time (s)
+        /// </summary>
+        public int AllIdleTimeSeconds { get; set; } = 60;
+
         /// <summary>Group
         /// </summary>
         public int GroupEventLoopCount { get; set; } = 1;
@@ -18,11 +35,6 @@ namespace FluentSocket
         /// <summary>Local bind ip address and port
         /// </summary>
         public IPEndPoint LocalEndPoint { get; set; }
-
-
-        /// <summary>Enable async to handle push handler
-        /// </summary>
-        public bool EnableAsyncPushHandler { get; set; } = false;
 
         /// <summary>Keep alive
         /// </summary>

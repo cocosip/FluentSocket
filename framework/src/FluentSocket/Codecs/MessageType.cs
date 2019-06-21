@@ -1,6 +1,6 @@
 ﻿namespace FluentSocket.Codecs
 {
-    public enum MessageType : short
+    public enum MessageType : byte
     {
         Request = 1,
 

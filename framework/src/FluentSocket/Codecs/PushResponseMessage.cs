@@ -12,7 +12,7 @@ namespace FluentSocket.Codecs
         }
 
 
-        public PushResponseMessage(int responseCode, byte[] body, string requestId, int requestCode, DateTime requestTime) : base(responseCode, body, requestId, requestCode, requestTime)
+        public PushResponseMessage(short responseCode, byte[] body, string requestId, short requestCode, DateTime requestTime) : base(responseCode, body, requestId, requestCode, requestTime)
         {
             MessageType = MessageType.PushResponse;
         }

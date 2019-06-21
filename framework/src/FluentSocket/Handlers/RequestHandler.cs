@@ -42,24 +42,18 @@ namespace FluentSocket.Handlers
                 if (_requestMessageHandlerDict.TryGetValue(msg.Code, out IRequestMessageHandler handler))
                 {
 
-                    if (_setting.EnableAsyncRequestHandler)
+                    handler.HandleRequestAsync(msg).ContinueWith(t =>
                     {
-                        handler.HandleRequestAsync(msg).ContinueWith(t =>
+                        if (t.Exception == null)
                         {
-                            if (t.Exception == null && t.IsCompleted)
-                            {
-                                WriteAndFlush(ctx, t.Result);
-                            }
-                        });
-                    }
-                    else
-                    {
-                        Task.Run(() =>
+                            WriteAndFlush(ctx, t.Result);
+                        }
+                        else
                         {
-                            var response = handler.HandleRequest(msg);
-                            WriteAndFlush(ctx, response);
-                        });
-                    }
+                            var response = ResponseMessage.BuildExceptionResponse(msg, t.Exception.Message);
+                            WriteAndFlush(ctx, t.Result);
+                        }
+                    });
                 }
                 else
                 {

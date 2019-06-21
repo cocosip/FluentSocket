@@ -53,7 +53,6 @@ namespace FluentSocket.Net45TestServer
                 SoSndbuf = 1024 * 1024 * 2,
                 IsSsl = false,
                 UseLibuv = false,
-                EnableHeartbeat = false,
                 ListeningEndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 21000),
                 //BossGroupEventLoopCount = 1,
                 //WorkGroupEventLoopCount = 2,

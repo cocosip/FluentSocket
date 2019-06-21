@@ -14,7 +14,7 @@ namespace FluentSocket.Codecs
 
         internal void DoDecode(IChannelHandlerContext context, IByteBuffer buffer, List<object> output)
         {
-            var messageType = (MessageType)buffer.ReadShort();
+            var messageType = (MessageType)buffer.ReadByte();
             switch (messageType)
             {
                 case MessageType.Request:
@@ -50,7 +50,7 @@ namespace FluentSocket.Codecs
             //Id read
             requestMessage.Id = DecodeStringInUtf8(idBytes);
             //code
-            requestMessage.Code = buffer.ReadInt();
+            requestMessage.Code = buffer.ReadShort();
             //body
             var bodyLength = buffer.ReadInt();
             byte[] body = new byte[bodyLength];
@@ -81,7 +81,7 @@ namespace FluentSocket.Codecs
             buffer.ReadBytes(idBytes);
             responseMessage.Id = DecodeStringInUtf8(idBytes);
             //code
-            responseMessage.ResponseCode = buffer.ReadInt();
+            responseMessage.ResponseCode = buffer.ReadShort();
             //body
             var bodyLength = buffer.ReadInt();
             byte[] body = new byte[bodyLength];
@@ -101,7 +101,7 @@ namespace FluentSocket.Codecs
             buffer.ReadBytes(requestIdBytes);
             responseMessage.RequestId = DecodeStringInUtf8(requestIdBytes);
             //response.requestCode
-            responseMessage.RequestCode = buffer.ReadInt();
+            responseMessage.RequestCode = buffer.ReadShort();
             //response.requestTime
             responseMessage.RequestTime = new DateTime(buffer.ReadLong());
 
@@ -123,7 +123,7 @@ namespace FluentSocket.Codecs
             //Id read
             pushMessage.Id = DecodeStringInUtf8(idBytes);
             //code
-            pushMessage.Code = buffer.ReadInt();
+            pushMessage.Code = buffer.ReadShort();
             //needack
             pushMessage.NeedAck = buffer.ReadBoolean();
             //body
@@ -157,7 +157,7 @@ namespace FluentSocket.Codecs
             buffer.ReadBytes(idBytes);
             responseMessage.Id = DecodeStringInUtf8(idBytes);
             //code
-            responseMessage.ResponseCode = buffer.ReadInt();
+            responseMessage.ResponseCode = buffer.ReadShort();
             //body
             var bodyLength = buffer.ReadInt();
             byte[] body = new byte[bodyLength];
@@ -177,7 +177,7 @@ namespace FluentSocket.Codecs
             buffer.ReadBytes(requestIdBytes);
             responseMessage.RequestId = DecodeStringInUtf8(requestIdBytes);
             //response.requestCode
-            responseMessage.RequestCode = buffer.ReadInt();
+            responseMessage.RequestCode = buffer.ReadShort();
             //response.requestTime
             responseMessage.RequestTime = new DateTime(buffer.ReadLong());
 

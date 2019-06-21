@@ -52,16 +52,16 @@ namespace FluentSocket.TestPushServer
                     {
                         var pushMessage = new PushMessage(110, sendBytes, true);
 
-                        _server.PushMessageToSingleClientAsync(pushMessage, x => true, 10000).ContinueWith(t =>
-                        {
-                            if (t.Exception != null)
-                            {
-                                _logger.LogError(t.Exception, t.Exception.Message);
-                                return;
-                            }
-                            var pushMessageResponse = t.Result;
-                            _performanceService.IncrementKeyCount(_mode, (DateTime.Now - pushMessage.CreatedTime).TotalMilliseconds);
-                        });
+                        _server.PushMessageToSingleClientAsync(pushMessage, x => true, 5000, 1000).ContinueWith(t =>
+                         {
+                             if (t.Exception != null)
+                             {
+                                 _logger.LogError(t.Exception, t.Exception.Message);
+                                 return;
+                             }
+                             var pushMessageResponse = t.Result;
+                             _performanceService.IncrementKeyCount(_mode, (DateTime.Now - pushMessage.CreatedTime).TotalMilliseconds);
+                         });
 
                     }
                     catch (Exception ex)
@@ -72,6 +72,7 @@ namespace FluentSocket.TestPushServer
                     Interlocked.Increment(ref index);
                 }
             });
+
             Console.WriteLine("开始推送了");
         }
 
@@ -91,17 +92,16 @@ namespace FluentSocket.TestPushServer
             var provider = services.BuildServiceProvider();
             _logger = provider.GetService<ILogger<SocketServer>>();
             var socketFactory = provider.GetService<IFluentSocketFactory>();
-            
+
             //服务器端
             var setting = new ServerSetting()
             {
-                WriteBufferLowWaterMark = 1024 * 1024 * 4,
-                WriteBufferHighWaterMark = 1024 * 1024 * 2,
+                WriteBufferLowWaterMark = 1024 * 1024 * 1,
+                WriteBufferHighWaterMark = 1024 * 1024 * 4,
                 SoRcvbuf = 1024 * 1024 * 2,
                 SoSndbuf = 1024 * 1024 * 2,
                 IsSsl = false,
                 UseLibuv = false,
-                EnableHeartbeat = false,
                 ListeningEndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 22000),
                 PipelineConfigure = c =>
                 {

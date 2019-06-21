@@ -18,6 +18,8 @@ namespace FluentSocket.TestClient
         static int _messageCount;
         static string _mode;
         static SocketClient _client;
+        static SocketClient _client2;
+        static SocketClient _client3;
         static ILogger _logger;
         static IPerformanceService _performanceService;
         static void Main(string[] args)
@@ -32,68 +34,53 @@ namespace FluentSocket.TestClient
         {
             _performanceService.Start();
             await _client.RunAsync();
+            await _client2.RunAsync();
+            await _client3.RunAsync();
             StartSendMessageTest();
         }
 
         static void StartSendMessageTest()
         {
-
-            //Task.Delay(3000).Wait();
             var index = 0;
-            var sendBytes = new byte[1024];
-            //Encoding.UTF8.GetBytes("Hello,I'm client!");
-            //_performanceService.IncrementKeyCount(_mode, 0);
-            for (var i = 0; i < 1; i++)
+            var sendBytes = new byte[1024 * 5];
+            Action<object> action = client =>
             {
-                var task = Task.Factory.StartNew(() =>
+                while (index < _messageCount)
                 {
-                    while (index < _messageCount)
+                    try
                     {
-                        try
+                        var request = new RequestMessage(100, sendBytes);
+                        ((SocketClient)client).SendAsync(request, 10000, 2000, false).ContinueWith(t =>
                         {
-                            var request = new RequestMessage(100, sendBytes);
-                            //var sendTask = _client.SendAsync(request, 10000);
-                            //sendTask.Wait(5000);
-                            //if (sendTask.Result.ResponseCode != (int)ResponseCodes.HasException)
-                            //{
-                            //    _performanceService.IncrementKeyCount(_mode, (DateTime.Now - sendTask.Result.RequestTime).TotalMilliseconds);
-                            //}
-                            //else
-                            //{
-                            //    _logger.LogInformation("ResponseException,ResponseCode:{0}", sendTask.Result.ResponseCode);
-                            //}
-
-                            _client.SendAsync(request, 10000, 2000, false).ContinueWith(t =>
+                            if (t.Exception != null)
                             {
-                                if (t.Exception != null)
-                                {
-                                    _logger.LogError(t.Exception, t.Exception.Message);
-                                    return;
-                                }
-                                var response = t.Result;
-                                //_logger.LogInformation("接收服务器端返回:{0}" + Encoding.UTF8.GetString(response.Body));
-                                if (response.ResponseCode != (int)ResponseCodes.HasException)
-                                {
-                                    _performanceService.IncrementKeyCount(_mode, (DateTime.Now - response.RequestTime).TotalMilliseconds);
-                                }
-                                else
-                                {
-                                    _logger.LogInformation("ResponseException,ResponseCode:{0}", response.ResponseCode);
-                                }
-                            });
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError("Send remotingRequest failed, errorMsg:{0}", ex.Message);
-                        }
-
-                        Interlocked.Increment(ref index);
+                                _logger.LogError(t.Exception, t.Exception.Message);
+                                return;
+                            }
+                            var response = t.Result;
+                            //_logger.LogInformation("接收服务器端返回:{0}" + Encoding.UTF8.GetString(response.Body));
+                            if (response.ResponseCode != (int)ResponseCodes.HasException)
+                            {
+                                _performanceService.IncrementKeyCount(_mode, (DateTime.Now - response.RequestTime).TotalMilliseconds);
+                            }
+                            else
+                            {
+                                _logger.LogInformation("ResponseException,ResponseCode:{0}", response.ResponseCode);
+                            }
+                        });
                     }
-                });
+                    catch (Exception ex)
+                    {
+                        _logger.LogError("Send remotingRequest failed, errorMsg:{0}", ex.Message);
+                    }
 
-            }
+                    Interlocked.Increment(ref index);
+                }
+            };
 
-
+            Task.Factory.StartNew(action, _client);
+            Task.Factory.StartNew(action, _client2);
+            Task.Factory.StartNew(action, _client3);
         }
 
 
@@ -126,6 +113,8 @@ namespace FluentSocket.TestClient
             };
 
             _client = socketFactory.CreateClient(setting);
+            _client2 = socketFactory.CreateClient(setting);
+            _client3 = socketFactory.CreateClient(setting);
 
             _logger = provider.GetService<ILogger<SocketClient>>();
             _performanceService = provider.GetService<IPerformanceService>();

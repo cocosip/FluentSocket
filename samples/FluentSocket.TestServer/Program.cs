@@ -53,8 +53,8 @@ namespace FluentSocket.TestServer
                 EnableHeartbeat = false,
                 ListeningEndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 21000),
                 EnableAsyncRequestHandler = true,
-                //BossGroupEventLoopCount = 1,
-                //WorkGroupEventLoopCount = 2,
+                BossGroupEventLoopCount = 2,
+                WorkGroupEventLoopCount = 4,
             };
             _server = socketFactory.CreateServer(setting);
 

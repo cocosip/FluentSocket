@@ -86,7 +86,7 @@ namespace FluentSocket.Tests.Codecs
         [InlineData("qqq", -1, "weqw1wq2", "Je`qdsw2", -100)]
         [InlineData("  ", 1222, "aweowwwq", "55212", 22)]
         [InlineData("123qweasd", 323, "---zzzz----", "55212", -3)]
-        public void TestResponseMessage(string id, short code, string bodyContent, string requestId, int requestCode)
+        public void TestResponseMessage(string id, short code, string bodyContent, string requestId, short requestCode)
         {
             var createdTime = Convert.ToDateTime("2018-01-01 12:00:00");
             var requestCreatedTime = Convert.ToDateTime("2018-12-31 12:00:00");

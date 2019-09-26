@@ -2,7 +2,7 @@
 
 <Import Project="..\..\..\build\common.props" />
   <PropertyGroup>
-    <TargetFrameworks>net45;netstandard2.0</TargetFrameworks>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>FluentSocket</AssemblyName>
     <PackageId>FluentSocket</PackageId>
      <RootNamespace>FluentSocket</RootNamespace>

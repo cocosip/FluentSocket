@@ -13,6 +13,8 @@ public class BuildParameters
     public bool IsRunningOnWindows { get; private set; }
     public bool IsRunningOnTravisCI { get; private set; }
     public bool IsRunningOnAppVeyor { get; private set; }
+    public bool IsRunningOnAzurePipelines { get; private set; }
+    public bool IsRunningOnAzurePipelinesHosted { get; private set;}
     public bool IsPullRequest { get; private set; }
     public bool IsMasterBranch { get; private set; }
     public bool IsDevelopBranch { get; private set; }
@@ -39,7 +41,7 @@ public class BuildParameters
     {
         get
         {
-            return !IsLocalBuild && !IsPullRequest && IsTagged && (IsRunningOnTravisCI || IsRunningOnAppVeyor)&&IsRunningOnWindows;
+            return !IsLocalBuild && !IsPullRequest && IsTagged && (IsRunningOnTravisCI || IsRunningOnAppVeyor || IsRunningOnAzurePipelines|| IsRunningOnAzurePipelinesHosted)&&IsRunningOnWindows;
         }
     }
 
@@ -47,7 +49,7 @@ public class BuildParameters
     {
         get
         {
-            return !IsLocalBuild && !IsPullRequest && IsTagged && (IsRunningOnTravisCI || IsRunningOnAppVeyor)&&IsRunningOnWindows;
+            return !IsLocalBuild && !IsPullRequest && IsTagged && (IsRunningOnTravisCI || IsRunningOnAppVeyor || IsRunningOnAzurePipelines || IsRunningOnAzurePipelinesHosted)&&IsRunningOnWindows;
         }
     }
 
@@ -114,6 +116,8 @@ public class BuildParameters
             IsRunningOnWindows = context.IsRunningOnWindows(),
             IsRunningOnTravisCI = buildSystem.TravisCI.IsRunningOnTravisCI,
             IsRunningOnAppVeyor =  buildSystem.AppVeyor.IsRunningOnAppVeyor,
+            IsRunningOnAzurePipelines = buildSystem.TFBuild.IsRunningOnAzurePipelines,
+            IsRunningOnAzurePipelinesHosted= buildSystem.TFBuild.IsRunningOnAzurePipelinesHosted,
             IsPullRequest = IsThePullRequest(buildSystem),
             IsMasterBranch = IsTheMasterBranch(buildSystem),
             IsDevelopBranch = IsTheDevelopBranch(buildSystem),
@@ -140,6 +144,8 @@ public class BuildParameters
         context.Information($"IsRunningOnAppVeyor:{parameters.IsRunningOnAppVeyor}");
         context.Information($"IsPullRequest:{parameters.IsPullRequest}");
         context.Information($"IsMasterBranch:{parameters.IsMasterBranch}");
+        context.Information($"IsRunningOnAzurePipelines:{parameters.IsRunningOnAzurePipelines}");
+        context.Information($"IsRunningOnAzurePipelinesHosted:{parameters.IsRunningOnAzurePipelinesHosted}");
         context.Information($"IsTagged:{parameters.IsTagged}");
         context.Information($"ShouldPublish:{parameters.ShouldPublish}");
         context.Information($"ShouldPublishToNuGet:{parameters.ShouldPublishToNuGet}");
@@ -147,25 +153,26 @@ public class BuildParameters
         return parameters;
     }
 
-    private static bool IsThePullRequest(BuildSystem buildSystem)
+   private static bool IsThePullRequest(BuildSystem buildSystem)
     {
-        return (buildSystem.TravisCI.IsRunningOnTravisCI && StringComparer.OrdinalIgnoreCase.Equals("true", buildSystem.TravisCI.Environment.Repository.PullRequest)) || (buildSystem.AppVeyor.IsRunningOnAppVeyor && buildSystem.AppVeyor.Environment.PullRequest.IsPullRequest);
+        return (buildSystem.TravisCI.IsRunningOnTravisCI && StringComparer.OrdinalIgnoreCase.Equals("true", buildSystem.TravisCI.Environment.Repository.PullRequest)) || (buildSystem.AppVeyor.IsRunningOnAppVeyor && buildSystem.AppVeyor.Environment.PullRequest.IsPullRequest) || ((buildSystem.TFBuild.IsRunningOnAzurePipelines||buildSystem.TFBuild.IsRunningOnAzurePipelinesHosted) &&buildSystem.TFBuild.Environment.PullRequest.IsPullRequest);
     }
 
     private static bool IsTheMasterBranch(BuildSystem buildSystem)
     {
-        return (buildSystem.TravisCI.IsRunningOnTravisCI && StringComparer.OrdinalIgnoreCase.Equals("master", buildSystem.TravisCI.Environment.Build.Branch)) || (buildSystem.AppVeyor.IsRunningOnAppVeyor && StringComparer.OrdinalIgnoreCase.Equals("master", buildSystem.AppVeyor.Environment.Repository.Branch));
+        return (buildSystem.TravisCI.IsRunningOnTravisCI && StringComparer.OrdinalIgnoreCase.Equals("master", buildSystem.TravisCI.Environment.Build.Branch)) || (buildSystem.AppVeyor.IsRunningOnAppVeyor && StringComparer.OrdinalIgnoreCase.Equals("master", buildSystem.AppVeyor.Environment.Repository.Branch)) || ((buildSystem.TFBuild.IsRunningOnAzurePipelines||buildSystem.TFBuild.IsRunningOnAzurePipelinesHosted) &&StringComparer.OrdinalIgnoreCase.Equals("master", buildSystem.TFBuild.Environment.Repository.Branch));
     }
 
     private static bool IsTheDevelopBranch(BuildSystem buildSystem)
     {
-        return (buildSystem.TravisCI.IsRunningOnTravisCI && (StringComparer.OrdinalIgnoreCase.Equals("develop", buildSystem.TravisCI.Environment.Build.Branch) || StringComparer.OrdinalIgnoreCase.Equals("dev", buildSystem.TravisCI.Environment.Build.Branch))) || (buildSystem.AppVeyor.IsRunningOnAppVeyor && (StringComparer.OrdinalIgnoreCase.Equals("develop", buildSystem.AppVeyor.Environment.Repository.Branch) || StringComparer.OrdinalIgnoreCase.Equals("dev", buildSystem.AppVeyor.Environment.Repository.Branch)));
+        return (buildSystem.TravisCI.IsRunningOnTravisCI && (StringComparer.OrdinalIgnoreCase.Equals("develop", buildSystem.TravisCI.Environment.Build.Branch) || StringComparer.OrdinalIgnoreCase.Equals("dev", buildSystem.TravisCI.Environment.Build.Branch))) || (buildSystem.AppVeyor.IsRunningOnAppVeyor && (StringComparer.OrdinalIgnoreCase.Equals("develop", buildSystem.AppVeyor.Environment.Repository.Branch) || StringComparer.OrdinalIgnoreCase.Equals("dev", buildSystem.AppVeyor.Environment.Repository.Branch))) || ((buildSystem.TFBuild.IsRunningOnAzurePipelines||buildSystem.TFBuild.IsRunningOnAzurePipelinesHosted) && (StringComparer.OrdinalIgnoreCase.Equals("develop", buildSystem.TFBuild.Environment.Repository.Branch)||StringComparer.OrdinalIgnoreCase.Equals("dev", buildSystem.TFBuild.Environment.Repository.Branch)));
     }
 
     private static bool IsBuildTagged(BuildSystem buildSystem)
     {
         return (buildSystem.IsRunningOnAppVeyor && buildSystem.AppVeyor.Environment.Repository.Tag.IsTag) ||
-				(buildSystem.IsRunningOnTravisCI && !string.IsNullOrWhiteSpace(buildSystem.TravisCI.Environment.Build.Tag));
+				(buildSystem.IsRunningOnTravisCI && !string.IsNullOrWhiteSpace(buildSystem.TravisCI.Environment.Build.Tag))||
+                ((buildSystem.TFBuild.IsRunningOnAzurePipelines||buildSystem.TFBuild.IsRunningOnAzurePipelinesHosted) && buildSystem.TFBuild.Environment.Repository.SourceBranch.StartsWith("refs/tags"));
     }
 
     private static bool IsReleasing(string target)

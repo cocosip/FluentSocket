@@ -1,6 +1,6 @@
 # FluentSocket 对DotNetty进行了封装,让通讯变得更简单
 
-[![GitHub](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/cocosip/FluentSocket/blob/master/LICENSE) ![GitHub last commit](https://img.shields.io/github/last-commit/cocosip/FluentSocket.svg) ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/cocosip/FluentSocket.svg)
+[![996.icu](https://img.shields.io/badge/link-996.icu-red.svg)](https://996.icu) [![GitHub](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/cocosip/FluentSocket/blob/master/LICENSE) ![GitHub last commit](https://img.shields.io/github/last-commit/cocosip/FluentSocket.svg) ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/cocosip/FluentSocket.svg)
 
 | Build Server | Platform | Build Status |
 | ------------ | -------- | ------------ |

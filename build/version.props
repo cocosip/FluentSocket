@@ -2,9 +2,9 @@
     <PropertyGroup>
         <VersionMajor>0</VersionMajor>
         <VersionMinor>2</VersionMinor>
-        <VersionPatch>0</VersionPatch>
+        <VersionPatch>1</VersionPatch>
         <VersionQuality></VersionQuality>
         <VersionPrefix>$(VersionMajor).$(VersionMinor).$(VersionPatch)</VersionPrefix>
-        <VersionSuffix>alpha</VersionSuffix>
+        <VersionSuffix></VersionSuffix>
     </PropertyGroup>
 </Project>

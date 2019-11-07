@@ -162,7 +162,7 @@ namespace FluentSocket
 
         /// <summary>Send message, return ResponseMessage
         /// </summary>
-        public Task<ResponseMessage> SendAsync(RequestMessage request, int timeoutMillis, int thresholdCount = 1000, bool sendWait = true)
+        public Task<ResponseMessage> SendAsync(RequestMessage request, int timeoutMillis, int thresholdCount = 1000)
         {
             CheckChannel(_clientChannel);
             if (!_clientChannel.IsWritable)
@@ -180,14 +180,7 @@ namespace FluentSocket
             {
                 throw new Exception($"Add remoting request response future failed. request id:{request.Id}");
             }
-            if (sendWait)
-            {
-                _clientChannel.WriteAndFlushAsync(request).Wait();
-            }
-            else
-            {
-                _clientChannel.WriteAndFlushAsync(request);
-            }
+            _clientChannel.WriteAndFlushAsync(request).Wait();
             return taskCompletionSource.Task;
         }
 

@@ -50,7 +50,7 @@ namespace FluentSocket.TestClient
                     try
                     {
                         var request = new RequestMessage(100, sendBytes);
-                        ((SocketClient)client).SendAsync(request, 10000, 2000, false).ContinueWith(t =>
+                        ((SocketClient)client).SendAsync(request, 10000, 2000).ContinueWith(t =>
                         {
                             if (t.Exception != null)
                             {

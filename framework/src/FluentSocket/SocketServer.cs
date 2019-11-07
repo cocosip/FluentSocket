@@ -170,19 +170,16 @@ namespace FluentSocket
 
         /// <summary>Push message to single client
         /// </summary>
-        public Task<PushResponseMessage> PushMessageToSingleClientAsync(PushMessage pushMessage, Func<ChannelInfo, bool> predicate, int timeoutMillis = 5000, int thresholdCount = 500)
+        public Task<PushResponseMessage> PushMessageToSingleClientAsync(PushMessage pushMessage, Func<ChannelInfo, bool> predicate, int timeoutMillis = 5000, int thresholdCount = 1000)
         {
             var channel = _channelManager.FindFirstChannel(predicate);
             CheckChannel(channel);
-            //while (!channel.IsWritable)
-            //{
-            //    Thread.Sleep(1);
-            //}
-            //var sleepMilliseconds = FlowControlUtil.CalculateFlowControlTimeMilliseconds(_pushResponseFutureDict.Count, thresholdCount);
-            //if (sleepMilliseconds > 0)
-            //{
-            //    Thread.Sleep(sleepMilliseconds);
-            //}
+
+            var sleepMilliseconds = FlowControlUtil.CalculateFlowControlTimeMilliseconds(_pushResponseFutureDict.Count, thresholdCount);
+            if (sleepMilliseconds > 0)
+            {
+                Thread.Sleep(sleepMilliseconds);
+            }
             var taskCompletionSource = new TaskCompletionSource<PushResponseMessage>();
             var pushResponseFuture = new PushResponseFuture(pushMessage, timeoutMillis, taskCompletionSource);
 
@@ -196,7 +193,7 @@ namespace FluentSocket
 
         /// <summary>Push message to multiple client
         /// </summary>
-        public Task PushMessageToMultipleClientAsync(PushMessage pushMessage, Func<ChannelInfo, bool> predicate, int timeoutMillis, int thresholdCount = 500)
+        public Task PushMessageToMultipleClientAsync(PushMessage pushMessage, Func<ChannelInfo, bool> predicate, int timeoutMillis, int thresholdCount = 1000)
         {
             //push to one client need ack
             pushMessage.NeedAck = false;

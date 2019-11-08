@@ -1,6 +1,5 @@
 ﻿using DotNetty.Codecs;
 using DotNetty.Handlers.Logging;
-using DotNetty.Handlers.Timeout;
 using DotNetty.Handlers.Tls;
 using DotNetty.Transport.Bootstrapping;
 using DotNetty.Transport.Channels;
@@ -32,11 +31,13 @@ namespace FluentSocket
         public string Name { get; }
         public string LocalIPAddress { get; }
         public bool IsRunning { get { return _isRunning; } }
+        public bool IsActive { get { return _boundChannel?.Active ?? false; } }
+        public bool IsOpen { get { return _boundChannel?.Open ?? false; } }
+
         private IEventLoopGroup _bossGroup = null;
         private IEventLoopGroup _workerGroup = null;
         private IChannel _boundChannel;
         private bool _isRunning = false;
-        private readonly ManualResetEventSlim _manualResetEventSlim = new ManualResetEventSlim(false);
         private readonly IDictionary<int, IRequestMessageHandler> _requestMessageHandlerDict;
         private readonly ConcurrentDictionary<string, PushResponseFuture> _pushResponseFutureDict;
 
@@ -48,13 +49,15 @@ namespace FluentSocket
             _channelManager = channelManager;
             _setting = setting;
 
-            _setting.OnChannelActiveHandler = setting.OnChannelActiveHandler == null ? f => { } : setting.OnChannelActiveHandler;
-            _setting.OnChannelInActiveHandler = setting.OnChannelInActiveHandler == null ? f => { } : setting.OnChannelInActiveHandler;
+            _setting.OnChannelActiveHandler = setting.OnChannelActiveHandler ?? (f => { });
+            _setting.OnChannelInActiveHandler = setting.OnChannelInActiveHandler ?? (f => { });
 
-            Name = "SocketServer-" + ObjectId.GenerateNewStringId();
+            Name = $"SocketServer-{ObjectId.GenerateNewStringId()}";
             LocalIPAddress = _setting.ListeningEndPoint.ToStringAddress();
-            _requestMessageHandlerDict = new Dictionary<int, IRequestMessageHandler>();
-            _requestMessageHandlerDict.Add(RequestCodes.HeartBeat, _provider.CreateInstance<HeartbeatRequestMessageHander>());
+            _requestMessageHandlerDict = new Dictionary<int, IRequestMessageHandler>
+            {
+                { RequestCodes.HeartBeat, _provider.CreateInstance<HeartbeatRequestMessageHander>() }
+            };
             _pushResponseFutureDict = new ConcurrentDictionary<string, PushResponseFuture>();
         }
 

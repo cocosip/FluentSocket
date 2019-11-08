@@ -32,6 +32,8 @@ namespace FluentSocket
         public string Name { get; }
         public string ServerIPAddress { get; }
         public bool IsRunning { get { return _isRunning; } }
+        public bool IsActive { get { return _clientChannel?.Active ?? false; } }
+        public bool IsOpen { get { return _clientChannel?.Open ?? false; } }
         public string LocalIPAddress { get { return _clientChannel?.LocalAddress.ToStringAddress() ?? ""; } }
         private IEventLoopGroup _group;
         private IChannel _clientChannel;
@@ -50,7 +52,7 @@ namespace FluentSocket
             _logger = loggerFactory.CreateLogger(FluentSocketSettings.LoggerName);
             _scheduleService = scheduleService;
             _setting = setting;
-            Name = "SocketClient-" + ObjectId.GenerateNewStringId();
+            Name = $"SocketClient-{ObjectId.GenerateNewStringId()}";
             ServerIPAddress = _setting.ServerEndPoint.ToIPv4Address();
             _pushMessageHandlerDict = new Dictionary<int, IPushMessageHandler>();
             _responseFutureDict = new ConcurrentDictionary<string, ResponseFuture>();

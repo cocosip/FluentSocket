@@ -205,7 +205,13 @@ namespace FluentSocket
 
         private async Task DoReConnectIfNeed()
         {
-            if (!_setting.EnableReConnect || _setting.ReConnectMaxCount < _reConnectAttempt)
+            //当客户端主动关闭的时候,将不会自动重连
+            if (!_isRunning)
+            {
+                return;
+            }
+            //判断是否为主动关闭
+            if (!_setting.EnableReConnect || _setting.ReConnectMaxCount <= _reConnectAttempt)
             {
                 return;
             }

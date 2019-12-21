@@ -232,7 +232,10 @@ namespace FluentSocket
                 }
                 finally
                 {
-                    Interlocked.Increment(ref _reConnectAttempt);
+                    if (!reConnectSuccess)
+                    {
+                        Interlocked.Increment(ref _reConnectAttempt);
+                    }
                     _semaphoreSlim.Release();
                 }
                 //Try again!

@@ -38,16 +38,21 @@ namespace FluentSocket
         private IEventLoopGroup _workerGroup = null;
         private IChannel _boundChannel;
         private bool _isRunning = false;
+
+        private readonly int _flowControlThreshold = 0;
+        private long _flowControlTimes = 0;
+
         private readonly IDictionary<int, IRequestMessageHandler> _requestMessageHandlerDict;
         private readonly ConcurrentDictionary<string, PushResponseFuture> _pushResponseFutureDict;
 
-        public SocketServer(IServiceProvider provider, ILoggerFactory loggerFactory, IScheduleService scheduleService, IChannelManager channelManager, ServerSetting setting)
+        public SocketServer(IServiceProvider provider, ILogger<SocketServer> logger, IScheduleService scheduleService, IChannelManager channelManager, ServerSetting setting)
         {
             _provider = provider;
-            _logger = loggerFactory.CreateLogger(FluentSocketSettings.LoggerName);
+            _logger = logger;
             _scheduleService = scheduleService;
             _channelManager = channelManager;
             _setting = setting;
+            _flowControlThreshold = _setting.SendMessageFlowControlThreshold;
 
             _setting.OnChannelActiveHandler = setting.OnChannelActiveHandler ?? (f => { });
             _setting.OnChannelInActiveHandler = setting.OnChannelInActiveHandler ?? (f => { });
@@ -106,7 +111,7 @@ namespace FluentSocket
                     .ChildOption(ChannelOption.SoSndbuf, _setting.SoSndbuf)
                     .ChildOption(ChannelOption.SoReuseaddr, _setting.SoReuseaddr)
                     .ChildOption(ChannelOption.AutoRead, _setting.AutoRead)
-                    .Handler(new LoggingHandler(FluentSocketSettings.LoggerName))
+                    .Handler(new LoggingHandler(nameof(SocketServer)))
                     .ChildHandler(new ActionChannelInitializer<IChannel>(channel =>
                     {
                         IChannelPipeline pipeline = channel.Pipeline;
@@ -114,7 +119,7 @@ namespace FluentSocket
                         {
                             pipeline.AddLast("tls", TlsHandler.Server(_setting.TlsCertificate));
                         }
-                        pipeline.AddLast(new LoggingHandler(FluentSocketSettings.LoggerName));
+                        pipeline.AddLast(new LoggingHandler(nameof(SocketServer)));
                         pipeline.AddLast("framing-enc", new LengthFieldPrepender(4));
                         pipeline.AddLast("framing-dec", new LengthFieldBasedFrameDecoder(int.MaxValue, 0, 4, 0, 4));
 
@@ -173,16 +178,14 @@ namespace FluentSocket
 
         /// <summary>Push message to single client
         /// </summary>
-        public Task<PushResponseMessage> PushMessageToSingleClientAsync(PushMessage pushMessage, Func<ChannelInfo, bool> predicate, int timeoutMillis = 5000, int thresholdCount = 1000)
+        public Task<PushResponseMessage> PushMessageToSingleClientAsync(PushMessage pushMessage, Func<ChannelInfo, bool> predicate, int timeoutMillis = 5000)
         {
             var channel = _channelManager.FindFirstChannel(predicate);
             CheckChannel(channel);
 
-            var sleepMilliseconds = FlowControlUtil.CalculateFlowControlTimeMilliseconds(_pushResponseFutureDict.Count, thresholdCount);
-            if (sleepMilliseconds > 0)
-            {
-                Thread.Sleep(sleepMilliseconds);
-            }
+            //FlowControl
+            FlowControlIfNecessary();
+
             var taskCompletionSource = new TaskCompletionSource<PushResponseMessage>();
             var pushResponseFuture = new PushResponseFuture(pushMessage, timeoutMillis, taskCompletionSource);
 
@@ -190,26 +193,23 @@ namespace FluentSocket
             {
                 throw new Exception($"Add remoting push response future failed. push message id:{pushMessage.Id}");
             }
-            channel.WriteAndFlushAsync(pushMessage).Wait();
+            channel.WriteAndFlushAsync(pushMessage);
             return taskCompletionSource.Task;
         }
 
         /// <summary>Push message to multiple client
         /// </summary>
-        public Task PushMessageToMultipleClientAsync(PushMessage pushMessage, Func<ChannelInfo, bool> predicate, int timeoutMillis, int thresholdCount = 1000)
+        public Task PushMessageToMultipleClientAsync(PushMessage pushMessage, Func<ChannelInfo, bool> predicate)
         {
             //push to one client need ack
             pushMessage.NeedAck = false;
 
             var channels = _channelManager.FindChannels(predicate);
-            var sleepMilliseconds = FlowControlUtil.CalculateFlowControlTimeMilliseconds(_pushResponseFutureDict.Count, thresholdCount);
-            if (sleepMilliseconds > 0)
-            {
-                Thread.Sleep(sleepMilliseconds);
-            }
+            //FlowControl
+            FlowControlIfNecessary();
             foreach (var channel in channels)
             {
-                channel.WriteAndFlushAsync(pushMessage).Wait(timeoutMillis);
+                channel.WriteAndFlushAsync(pushMessage);
             }
             return Task.FromResult(true);
         }
@@ -231,6 +231,21 @@ namespace FluentSocket
             if (!channel.Open || !channel.Active)
             {
                 throw new Exception($"Current channel is not useable,channelId:{channel.Id.AsShortText()}");
+            }
+        }
+
+        private void FlowControlIfNecessary()
+        {
+            var pendingMessageCount = _pushResponseFutureDict.Count;
+            if (_flowControlThreshold > 0 && pendingMessageCount >= _flowControlThreshold)
+            {
+                var sleepMillis = FlowControlUtil.CalculateFlowControlTimeMilliseconds(pendingMessageCount, _flowControlThreshold);
+                Thread.Sleep(sleepMillis);
+                var flowControlTimes = Interlocked.Increment(ref _flowControlTimes);
+                if (flowControlTimes % 10000 == 0)
+                {
+                    _logger.LogInformation("Client socket send data flow control, name: {0}, pendingMessageCount: {1}, flowControlThreshold: {2}, flowControlTimes: {3}", Name, pendingMessageCount, _flowControlThreshold, flowControlTimes);
+                }
             }
         }
 

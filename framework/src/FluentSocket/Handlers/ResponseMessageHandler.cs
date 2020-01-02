@@ -9,9 +9,9 @@ namespace FluentSocket.Handlers
     {
         private readonly ILogger _logger;
         private Action<ResponseMessage> _setResponseAction;
-        public ResponseMessageHandler(ILoggerFactory loggerFactory, Action<ResponseMessage> setResponseAction)
+        public ResponseMessageHandler(ILogger<ResponseMessageHandler> logger, Action<ResponseMessage> setResponseAction)
         {
-            _logger = loggerFactory.CreateLogger(FluentSocketSettings.LoggerName);
+            _logger = logger;
             _setResponseAction = setResponseAction;
         }
 

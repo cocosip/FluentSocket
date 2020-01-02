@@ -6,7 +6,7 @@ namespace FluentSocket.Handlers
 
     public class ChannelWatcherHandler : ChannelHandlerAdapter
     {
-        private Action<bool> _channelWritableChangeAction;
+        private readonly Action<bool> _channelWritableChangeAction;
 
         public ChannelWatcherHandler(Action<bool> channelWritableChangeAction)
         {

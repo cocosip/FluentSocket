@@ -6,7 +6,6 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace FluentSocket.Handlers
 {
@@ -14,12 +13,12 @@ namespace FluentSocket.Handlers
     {
         private readonly ManualResetEventSlim _manualResetEventSlim = new ManualResetEventSlim(false);
         private readonly ILogger _logger;
-        private IDictionary<int, IPushMessageHandler> _pushMessageHandlerDict;
+        private readonly IDictionary<int, IPushMessageHandler> _pushMessageHandlerDict;
         private readonly ClientSetting _setting;
 
-        public PushHandler(ILoggerFactory loggerFactory, ClientSetting setting)
+        public PushHandler(ILogger<PushHandler> logger, ClientSetting setting)
         {
-            _logger = loggerFactory.CreateLogger(FluentSocketSettings.LoggerName);
+            _logger = logger;
             _setting = setting;
             _pushMessageHandlerDict = new Dictionary<int, IPushMessageHandler>();
         }

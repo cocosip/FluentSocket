@@ -12,13 +12,13 @@ namespace FluentSocket.Channels
 {
     public class ChannelManager : IChannelManager
     {
-        private object SyncObject = new object();
+        private readonly object SyncObject = new object();
         private readonly ILogger _logger;
         public IChannelGroup Group { get; set; }
         private List<ChannelInfo> Channels { get; set; } = new List<ChannelInfo>();
-        public ChannelManager(ILoggerFactory loggerFactory)
+        public ChannelManager(ILogger<ChannelManager> logger)
         {
-            _logger = loggerFactory.CreateLogger(FluentSocketSettings.LoggerName);
+            _logger = logger;
         }
 
         public void Initialize(IChannelGroup channelGroup)

@@ -10,9 +10,9 @@ namespace FluentSocket.Handlers
         private readonly ILogger _logger;
         private Action<PushResponseMessage> _setPushResponseMessageAction;
 
-        public PushResponseMessageHandler(ILoggerFactory loggerFactory, Action<PushResponseMessage> setPushResponseMessageAction)
+        public PushResponseMessageHandler(ILogger<PushResponseMessageHandler> logger, Action<PushResponseMessage> setPushResponseMessageAction)
         {
-            _logger = loggerFactory.CreateLogger(FluentSocketSettings.LoggerName);
+            _logger = logger;
             _setPushResponseMessageAction = setPushResponseMessageAction;
         }
 

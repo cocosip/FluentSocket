@@ -12,9 +12,9 @@ namespace FluentSocket.Handlers
         private readonly ILogger _logger;
         private readonly ClientSetting _setting;
         private readonly Func<Task> _reConnectAction;
-        public ReConnectHandler(ILoggerFactory loggerFactory, ClientSetting setting, Func<Task> reConnectAction)
+        public ReConnectHandler(ILogger<ReConnectHandler> logger, ClientSetting setting, Func<Task> reConnectAction)
         {
-            _logger = loggerFactory.CreateLogger(FluentSocketSettings.LoggerName);
+            _logger = logger;
             _setting = setting;
             _reConnectAction = reConnectAction;
         }

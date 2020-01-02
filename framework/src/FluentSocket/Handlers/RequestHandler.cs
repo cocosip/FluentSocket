@@ -6,7 +6,6 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace FluentSocket.Handlers
 {
@@ -16,9 +15,9 @@ namespace FluentSocket.Handlers
         private readonly ILogger _logger;
         private IDictionary<int, IRequestMessageHandler> _requestMessageHandlerDict;
         private readonly ServerSetting _setting;
-        public RequestHandler(ILoggerFactory loggerFactory, ServerSetting setting)
+        public RequestHandler(ILogger<RequestHandler> logger, ServerSetting setting)
         {
-            _logger = loggerFactory.CreateLogger(FluentSocketSettings.LoggerName);
+            _logger = logger;
             _requestMessageHandlerDict = new Dictionary<int, IRequestMessageHandler>();
             _setting = setting;
         }
@@ -44,7 +43,7 @@ namespace FluentSocket.Handlers
 
                     handler.HandleRequestAsync(msg).ContinueWith(t =>
                     {
-                        if (t.Exception == null)
+                        if (t.IsCompleted && t.Exception == null)
                         {
                             WriteAndFlush(ctx, t.Result);
                         }

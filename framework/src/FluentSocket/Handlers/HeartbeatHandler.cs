@@ -11,9 +11,9 @@ namespace FluentSocket.Handlers
     public class HeartbeatHandler : ChannelHandlerAdapter
     {
         private readonly ILogger _logger;
-        public HeartbeatHandler(ILoggerFactory loggerFactory)
+        public HeartbeatHandler(ILogger<HeartbeatHandler> logger)
         {
-            _logger = loggerFactory.CreateLogger(FluentSocketSettings.LoggerName);
+            _logger = logger;
         }
 
 

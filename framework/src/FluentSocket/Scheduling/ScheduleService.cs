@@ -11,14 +11,14 @@ namespace FluentSocket
         private readonly object _lockObject = new object();
         private readonly Dictionary<string, TimerBasedTask> _taskDict = new Dictionary<string, TimerBasedTask>();
 
-        public ScheduleService(ILoggerFactory loggerFactory)
+        public ScheduleService(ILogger<ScheduleService> logger)
         {
-            _logger = loggerFactory.CreateLogger(FluentSocketSettings.LoggerName);
+            _logger = logger;
         }
 
         public void StartTask(string name, Action action, int dueTime, int period)
         {
-            lock(_lockObject)
+            lock (_lockObject)
             {
                 if (_taskDict.ContainsKey(name))
                 {
@@ -40,7 +40,7 @@ namespace FluentSocket
         }
         public void StopTask(string name)
         {
-            lock(_lockObject)
+            lock (_lockObject)
             {
                 TimerBasedTask task;
                 if (_taskDict.TryGetValue(name, out task))
@@ -66,7 +66,7 @@ namespace FluentSocket
                         task.Action();
                     }
                 }
-                catch (ObjectDisposedException) {}
+                catch (ObjectDisposedException) { }
                 catch (Exception ex)
                 {
                     throw new Exception($"Task has exception, name: {task.Name}, due: {task.DueTime}, period: {task.Period},error detail:{ex.Message}");
@@ -80,7 +80,7 @@ namespace FluentSocket
                             task.Timer.Change(task.Period, task.Period);
                         }
                     }
-                    catch (ObjectDisposedException) {}
+                    catch (ObjectDisposedException) { }
                     catch (Exception ex)
                     {
                         throw new Exception($"Timer change has exception, name: {task.Name}, due: {task.DueTime}, period: {task.Period},error detail:{ex.Message}");

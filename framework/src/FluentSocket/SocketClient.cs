@@ -41,17 +41,21 @@ namespace FluentSocket
 
         private bool _isRunning = false;
         private int _reConnectAttempt = 0;
+        private readonly int _flowControlThreshold = 0;
+        private long _flowControlTimes = 0;
         private readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
         private readonly ManualResetEventSlim _manualResetEventSlim = new ManualResetEventSlim(false);
         private readonly Dictionary<int, IPushMessageHandler> _pushMessageHandlerDict;
         private readonly ConcurrentDictionary<string, ResponseFuture> _responseFutureDict;
 
-        public SocketClient(IServiceProvider provider, ILoggerFactory loggerFactory, IScheduleService scheduleService, ClientSetting setting)
+        public SocketClient(IServiceProvider provider, ILogger<SocketClient> logger, IScheduleService scheduleService, ClientSetting setting)
         {
             _provider = provider;
-            _logger = loggerFactory.CreateLogger(FluentSocketSettings.LoggerName);
+            _logger = logger;
             _scheduleService = scheduleService;
             _setting = setting;
+            _flowControlThreshold = _setting.SendMessageFlowControlThreshold;
+
             Name = $"SocketClient-{ObjectId.GenerateNewStringId()}";
             ServerIPAddress = _setting.ServerEndPoint.ToIPv4Address();
             _pushMessageHandlerDict = new Dictionary<int, IPushMessageHandler>();
@@ -99,7 +103,7 @@ namespace FluentSocket
                             pipeline.AddLast(new IdleStateHandler(_setting.ReaderIdleTimeSeconds, _setting.WriterIdleTimeSeconds, _setting.AllIdleTimeSeconds));
                         }
 
-                        pipeline.AddLast(new LoggingHandler(FluentSocketSettings.LoggerName));
+                        pipeline.AddLast(new LoggingHandler(nameof(SocketClient)));
                         pipeline.AddLast("framing-enc", new LengthFieldPrepender(4));
                         pipeline.AddLast("framing-dec", new LengthFieldBasedFrameDecoder(int.MaxValue, 0, 4, 0, 4));
 
@@ -164,26 +168,39 @@ namespace FluentSocket
 
         /// <summary>Send message, return ResponseMessage
         /// </summary>
-        public Task<ResponseMessage> SendAsync(RequestMessage request, int timeoutMillis, int thresholdCount = 1000)
+        public Task<ResponseMessage> SendAsync(RequestMessage request, int timeoutMillis)
         {
             CheckChannel(_clientChannel);
             if (!_clientChannel.IsWritable)
             {
                 _manualResetEventSlim.Wait();
             }
-            var sleepMilliseconds = FlowControlUtil.CalculateFlowControlTimeMilliseconds(_responseFutureDict.Count, thresholdCount);
-            if (sleepMilliseconds > 0)
-            {
-                Thread.Sleep(sleepMilliseconds);
-            }
+            //  FlowControl
+            FlowControlIfNecessary();
             var taskCompletionSource = new TaskCompletionSource<ResponseMessage>();
             var responseFuture = new ResponseFuture(request, timeoutMillis, taskCompletionSource);
             if (!_responseFutureDict.TryAdd(request.Id, responseFuture))
             {
                 throw new Exception($"Add remoting request response future failed. request id:{request.Id}");
             }
-            _clientChannel.WriteAndFlushAsync(request).Wait();
+            _clientChannel.WriteAndFlushAsync(request);
             return taskCompletionSource.Task;
+        }
+
+
+        private void FlowControlIfNecessary()
+        {
+            var pendingMessageCount = _responseFutureDict.Count;
+            if (_flowControlThreshold > 0 && pendingMessageCount >= _flowControlThreshold)
+            {
+                var sleepMillis = FlowControlUtil.CalculateFlowControlTimeMilliseconds(pendingMessageCount, _flowControlThreshold);
+                Thread.Sleep(sleepMillis);
+                var flowControlTimes = Interlocked.Increment(ref _flowControlTimes);
+                if (flowControlTimes % 10000 == 0)
+                {
+                    _logger.LogDebug("Client socket send data flow control, name: {0}, pendingMessageCount: {1}, flowControlThreshold: {2}, flowControlTimes: {3}", Name, pendingMessageCount, _flowControlThreshold, flowControlTimes);
+                }
+            }
         }
 
 

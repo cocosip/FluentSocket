@@ -52,7 +52,7 @@ namespace FluentSocket.TestPushServer
                     {
                         var pushMessage = new PushMessage(110, sendBytes, true);
 
-                        _server.PushMessageToSingleClientAsync(pushMessage, x => true, 5000, 1000).ContinueWith(t =>
+                        _server.PushMessageToSingleClientAsync(pushMessage, x => true, 5000).ContinueWith(t =>
                          {
                              if (t.Exception != null)
                              {

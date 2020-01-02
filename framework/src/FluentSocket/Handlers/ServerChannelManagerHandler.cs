@@ -16,10 +16,10 @@ namespace FluentSocket.Handlers
         private readonly ILogger _logger;
         private readonly Action<ChannelInfo> _onChannelActiveHandler;
         private readonly Action<ChannelInfo> _onChannelInActiveHandler;
-        private object SyncObject = new object();
-        public ServerChannelManagerHandler(ILoggerFactory loggerFactory, IChannelManager channelManager, Action<ChannelInfo> onChannelActiveHandler, Action<ChannelInfo> onChannelInActiveHandler)
+        private readonly object SyncObject = new object();
+        public ServerChannelManagerHandler(ILogger<ServerChannelManagerHandler> logger, IChannelManager channelManager, Action<ChannelInfo> onChannelActiveHandler, Action<ChannelInfo> onChannelInActiveHandler)
         {
-            _logger = loggerFactory.CreateLogger(FluentSocketSettings.LoggerName);
+            _logger = logger;
             _channelManager = channelManager;
             _onChannelActiveHandler = onChannelActiveHandler;
             _onChannelInActiveHandler = onChannelInActiveHandler;

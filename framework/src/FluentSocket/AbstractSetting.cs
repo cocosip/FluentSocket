@@ -16,11 +16,15 @@ namespace FluentSocket
 
         /// <summary>Round robin request expired interval (ms)
         /// </summary>
-        public int ScanTimeoutRequestInterval { get; set; } = 1000;
+        public int ScanTimeoutRequestInterval { get; set; } = 200;
 
         /// <summary>Wait the handler execute time (ms)
         /// </summary>
         public int WaitHandlerExecuteMilliSeconds { get; set; } = 3000;
+
+        /// <summary>Send message flowControl threshold
+        /// </summary>
+        public int SendMessageFlowControlThreshold { get; set; } = 500;
 
         /// <summary>Quiet after connection channel close (ms)
         /// </summary>

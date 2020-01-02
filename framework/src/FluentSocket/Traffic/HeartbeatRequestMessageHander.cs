@@ -1,8 +1,8 @@
-﻿using System.Threading.Tasks;
-using FluentSocket.Codecs;
+﻿using FluentSocket.Codecs;
 using FluentSocket.Protocols;
 using FluentSocket.Utils;
 using Microsoft.Extensions.Logging;
+using System.Threading.Tasks;
 
 namespace FluentSocket.Traffic
 {
@@ -10,9 +10,9 @@ namespace FluentSocket.Traffic
     {
         private readonly ILogger _logger;
 
-        public HeartbeatRequestMessageHander(ILoggerFactory loggerFactory)
+        public HeartbeatRequestMessageHander(ILogger<HeartbeatRequestMessageHander> logger)
         {
-            _logger = loggerFactory.CreateLogger(FluentSocketSettings.LoggerName);
+            _logger = logger;
         }
 
 

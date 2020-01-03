@@ -43,7 +43,7 @@ namespace FluentSocket
         private int _reConnectAttempt = 0;
         private readonly int _flowControlThreshold = 0;
         private long _flowControlTimes = 0;
-        private readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1);
         private readonly ManualResetEventSlim _manualResetEventSlim = new ManualResetEventSlim(false);
         private readonly Dictionary<int, IPushMessageHandler> _pushMessageHandlerDict;
         private readonly ConcurrentDictionary<string, ResponseFuture> _responseFutureDict;

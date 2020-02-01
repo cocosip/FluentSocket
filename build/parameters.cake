@@ -163,14 +163,14 @@ public class BuildParameters
         return (buildSystem.TravisCI.IsRunningOnTravisCI && StringComparer.OrdinalIgnoreCase.Equals("true", buildSystem.TravisCI.Environment.Repository.PullRequest)) || (buildSystem.AppVeyor.IsRunningOnAppVeyor && buildSystem.AppVeyor.Environment.PullRequest.IsPullRequest) || ((buildSystem.TFBuild.IsRunningOnAzurePipelines||buildSystem.TFBuild.IsRunningOnAzurePipelinesHosted) &&buildSystem.TFBuild.Environment.PullRequest.IsPullRequest);
     }
 
-    private static bool IsTheMasterBranch(BuildSystem buildSystem)
+       private static bool IsTheMasterBranch(BuildSystem buildSystem)
     {
-        return (buildSystem.TravisCI.IsRunningOnTravisCI && StringComparer.OrdinalIgnoreCase.Equals("master", buildSystem.TravisCI.Environment.Build.Branch)) || (buildSystem.AppVeyor.IsRunningOnAppVeyor && StringComparer.OrdinalIgnoreCase.Equals("master", buildSystem.AppVeyor.Environment.Repository.Branch)) || ((buildSystem.TFBuild.IsRunningOnAzurePipelines||buildSystem.TFBuild.IsRunningOnAzurePipelinesHosted) &&StringComparer.OrdinalIgnoreCase.Equals("master", buildSystem.TFBuild.Environment.Repository.Branch));
+        return (buildSystem.TravisCI.IsRunningOnTravisCI && StringComparer.OrdinalIgnoreCase.Equals("master", buildSystem.TravisCI.Environment.Build.Branch)) || (buildSystem.AppVeyor.IsRunningOnAppVeyor && StringComparer.OrdinalIgnoreCase.Equals("master", buildSystem.AppVeyor.Environment.Repository.Branch)) || ((buildSystem.TFBuild.IsRunningOnAzurePipelines||buildSystem.TFBuild.IsRunningOnAzurePipelinesHosted) &&StringComparer.OrdinalIgnoreCase.Equals("master", buildSystem.TFBuild.Environment.Repository.SourceBranchName));
     }
 
     private static bool IsTheDevelopBranch(BuildSystem buildSystem)
     {
-        return (buildSystem.TravisCI.IsRunningOnTravisCI && (StringComparer.OrdinalIgnoreCase.Equals("develop", buildSystem.TravisCI.Environment.Build.Branch) || StringComparer.OrdinalIgnoreCase.Equals("dev", buildSystem.TravisCI.Environment.Build.Branch))) || (buildSystem.AppVeyor.IsRunningOnAppVeyor && (StringComparer.OrdinalIgnoreCase.Equals("develop", buildSystem.AppVeyor.Environment.Repository.Branch) || StringComparer.OrdinalIgnoreCase.Equals("dev", buildSystem.AppVeyor.Environment.Repository.Branch))) || ((buildSystem.TFBuild.IsRunningOnAzurePipelines||buildSystem.TFBuild.IsRunningOnAzurePipelinesHosted) && (StringComparer.OrdinalIgnoreCase.Equals("develop", buildSystem.TFBuild.Environment.Repository.Branch)||StringComparer.OrdinalIgnoreCase.Equals("dev", buildSystem.TFBuild.Environment.Repository.Branch)));
+        return (buildSystem.TravisCI.IsRunningOnTravisCI && (StringComparer.OrdinalIgnoreCase.Equals("develop", buildSystem.TravisCI.Environment.Build.Branch) || StringComparer.OrdinalIgnoreCase.Equals("dev", buildSystem.TravisCI.Environment.Build.Branch))) || (buildSystem.AppVeyor.IsRunningOnAppVeyor && (StringComparer.OrdinalIgnoreCase.Equals("develop", buildSystem.AppVeyor.Environment.Repository.Branch) || StringComparer.OrdinalIgnoreCase.Equals("dev", buildSystem.AppVeyor.Environment.Repository.Branch))) || ((buildSystem.TFBuild.IsRunningOnAzurePipelines||buildSystem.TFBuild.IsRunningOnAzurePipelinesHosted) && (StringComparer.OrdinalIgnoreCase.Equals("develop", buildSystem.TFBuild.Environment.Repository.SourceBranchName)||StringComparer.OrdinalIgnoreCase.Equals("dev", buildSystem.TFBuild.Environment.Repository.SourceBranchName)));
     }
 
     private static bool IsBuildTagged(BuildSystem buildSystem)

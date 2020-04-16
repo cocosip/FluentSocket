@@ -105,7 +105,8 @@ namespace FluentSocket.TestPushServer
                 ListeningEndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 22000),
                 PipelineConfigure = c =>
                 {
-                    c.AddLast(provider.CreateInstance<ClientActiveHandler>(new Action(SetStartPush)));
+                    var handler = (ClientActiveHandler)ActivatorUtilities.CreateInstance(provider, typeof(ClientActiveHandler), new Action(SetStartPush));
+                    c.AddLast(handler);
                 }
             };
             _server = socketFactory.CreateServer(setting);

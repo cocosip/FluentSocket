@@ -66,7 +66,11 @@ namespace FluentSocket.TestPushClient
                 }
             };
             _performanceService.Initialize(_performanceKey, performanceServiceSetting);
-            _client.RegisterPushMessageHandler(110, provider.CreateInstance<ClientPushMessageHandler>(_performanceService));
+
+
+            var handler = (ClientPushMessageHandler)ActivatorUtilities.CreateInstance(provider, typeof(ClientPushMessageHandler), _performanceService);
+
+            _client.RegisterPushMessageHandler(110, handler);
         }
     }
 }

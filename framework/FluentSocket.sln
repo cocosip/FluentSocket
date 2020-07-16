@@ -1,15 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.26124.0
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30309.148
 MinimumVisualStudioVersion = 15.0.26124.0
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "framework", "framework", "{CEC954A9-61AF-4B4B-AD54-57F1997C1EDF}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FluentSocket", "src\FluentSocket\FluentSocket.csproj", "{11CAF751-128D-4E5D-8E4A-F5C2229DEF46}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{543058FE-4169-4590-AC8D-2AD4ADD2EE25}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FluentSocket.Tests", "test\FluentSocket.Tests\FluentSocket.Tests.csproj", "{3952FCA7-AEC6-442D-A40B-024553D21EAB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,25 +31,12 @@ Global
 		{11CAF751-128D-4E5D-8E4A-F5C2229DEF46}.Release|x64.Build.0 = Release|Any CPU
 		{11CAF751-128D-4E5D-8E4A-F5C2229DEF46}.Release|x86.ActiveCfg = Release|Any CPU
 		{11CAF751-128D-4E5D-8E4A-F5C2229DEF46}.Release|x86.Build.0 = Release|Any CPU
-		{3952FCA7-AEC6-442D-A40B-024553D21EAB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{3952FCA7-AEC6-442D-A40B-024553D21EAB}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{3952FCA7-AEC6-442D-A40B-024553D21EAB}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{3952FCA7-AEC6-442D-A40B-024553D21EAB}.Debug|x64.Build.0 = Debug|Any CPU
-		{3952FCA7-AEC6-442D-A40B-024553D21EAB}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{3952FCA7-AEC6-442D-A40B-024553D21EAB}.Debug|x86.Build.0 = Debug|Any CPU
-		{3952FCA7-AEC6-442D-A40B-024553D21EAB}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{3952FCA7-AEC6-442D-A40B-024553D21EAB}.Release|Any CPU.Build.0 = Release|Any CPU
-		{3952FCA7-AEC6-442D-A40B-024553D21EAB}.Release|x64.ActiveCfg = Release|Any CPU
-		{3952FCA7-AEC6-442D-A40B-024553D21EAB}.Release|x64.Build.0 = Release|Any CPU
-		{3952FCA7-AEC6-442D-A40B-024553D21EAB}.Release|x86.ActiveCfg = Release|Any CPU
-		{3952FCA7-AEC6-442D-A40B-024553D21EAB}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{11CAF751-128D-4E5D-8E4A-F5C2229DEF46} = {CEC954A9-61AF-4B4B-AD54-57F1997C1EDF}
-		{3952FCA7-AEC6-442D-A40B-024553D21EAB} = {543058FE-4169-4590-AC8D-2AD4ADD2EE25}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {10D52815-7314-4B9E-8B88-2E2B010C2AFA}

@@ -1,17 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-<Import Project="..\..\..\build\common.props" />
+  <Import Project="..\..\..\build\common.props" />
+
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFrameworks>netstandard2.0;netstandard2.1</TargetFrameworks>
     <AssemblyName>FluentSocket</AssemblyName>
     <PackageId>FluentSocket</PackageId>
-     <RootNamespace>FluentSocket</RootNamespace>
-    <Description>DotNetty封装</Description>
+    <RootNamespace>FluentSocket</RootNamespace>
+    <Description>Easy to communication</Description>
   </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="DotNetty.Handlers" Version="0.6.0" />
-    <PackageReference Include="DotNetty.Transport.Libuv" Version="0.6.0" />
-  </ItemGroup>
- 
-
+  
 </Project>

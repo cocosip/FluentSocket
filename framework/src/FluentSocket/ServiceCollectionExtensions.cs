@@ -8,8 +8,6 @@ namespace FluentSocket
         {
             services
                 .AddSingleton<IFluentSocketFactory, FluentSocketFactory>()
-                .AddScoped<ISocketServer, SocketServer>()
-                .AddScoped<ISocketClient, SocketClient>()
                 .AddScoped<ServerSetting>()
                 .AddScoped<ClientSetting>()
                 ;

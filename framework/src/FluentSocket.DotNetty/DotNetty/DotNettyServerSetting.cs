@@ -1,6 +1,6 @@
 ﻿namespace FluentSocket.DotNetty
 {
-    public class DotNettyServerExtraSetting : DotNettyExtraSetting, IExtraSetting
+    public class DotNettyServerSetting : DotNettySetting
     {
         /// <summary>BossGroup
         /// </summary>

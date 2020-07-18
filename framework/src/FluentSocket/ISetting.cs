@@ -1,6 +1,6 @@
 ﻿namespace FluentSocket
 {
-    public interface IExtraSetting
+    public interface ISetting
     {
     }
 }

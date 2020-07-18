@@ -2,17 +2,17 @@
 
 namespace FluentSocket
 {
-    public abstract class AbstractSetting
+    public abstract class Setting : ISetting
     {
-        public List<IExtraSetting> ExtraSettings { get; set; }
+        public List<ISetting> ExtraSettings { get; set; }
 
         /// <summary>Round robin request expired interval (ms)
         /// </summary>
         public int ScanTimeoutRequestInterval { get; set; } = 1000;
 
-        /// <summary>Wait the handler execute time (ms)
+        /// <summary>When received 'MessageReqPacket', it will write to the channel.
         /// </summary>
-        public int WaitHandlerExecuteMilliSeconds { get; set; } = 3000;
+        public int ReqPacketChannelCapacity { get; set; } = 10000;
 
         /// <summary>Send message flowControl threshold
         /// </summary>
@@ -27,9 +27,9 @@ namespace FluentSocket
         public int CloseTimeoutSeconds { get; set; } = 1;
 
 
-        public AbstractSetting()
+        public Setting()
         {
-            ExtraSettings = new List<IExtraSetting>();
+            ExtraSettings = new List<ISetting>();
         }
     }
 }

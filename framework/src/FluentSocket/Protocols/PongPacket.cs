@@ -1,13 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace FluentSocket.Protocols
+﻿namespace FluentSocket.Protocols
 {
     public class PongPacket : Packet
     {
         public override PacketType PacketType { get; set; } = PacketType.PINGRESP;
 
-
+        public byte PongCode { get; set; } = 2;
     }
 }

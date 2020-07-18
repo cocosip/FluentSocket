@@ -2,7 +2,7 @@
 
 namespace FluentSocket.DotNetty
 {
-    public abstract class DotNettyExtraSetting
+    public abstract class DotNettySetting : ISetting
     {
         /// <summary>Enable ssl
         /// </summary>
@@ -11,6 +11,10 @@ namespace FluentSocket.DotNetty
         /// <summary>X509 cert
         /// </summary>
         public X509Certificate2 TlsCertificate { get; set; }
+
+        /// <summary>Thread count when handle the 'ReqMessagePacket'
+        /// </summary>
+        public int HandleReqThreadCount { get; set; } = 1;
 
         /// <summary>Write buffer high water 2M
         /// </summary>

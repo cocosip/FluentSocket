@@ -2,7 +2,7 @@
 
 namespace FluentSocket
 {
-    public class ClientSetting : AbstractSetting
+    public class ClientSetting : Setting
     {
         /// <summary>Server ip address and port
         /// </summary>
@@ -19,6 +19,10 @@ namespace FluentSocket
         /// <summary>ReConnect delay seconds (default is 3s)
         /// </summary>
         public int ReConnectDelaySeconds { get; set; } = 3;
+
+        /// <summary>Try reConnect max count
+        /// </summary>
+        public int ReConnectMaxCount { get; set; } = 10;
 
         /// <summary>Enable heartbeat (default is false)
         /// </summary>

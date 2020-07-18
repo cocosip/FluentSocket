@@ -4,6 +4,6 @@
     {
         public override PacketType PacketType { get; set; } = PacketType.PINGREQ;
 
-        public byte PingCode { get; set; }
+        public byte PingCode { get; set; } = 1;
     }
 }

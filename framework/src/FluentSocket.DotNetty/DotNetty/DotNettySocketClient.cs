@@ -2,6 +2,7 @@
 using DotNetty.Handlers.Timeout;
 using DotNetty.Transport.Bootstrapping;
 using DotNetty.Transport.Channels;
+using DotNetty.Transport.Channels.Groups;
 using DotNetty.Transport.Channels.Sockets;
 using FluentSocket.DotNetty.Handlers;
 using FluentSocket.Protocols;
@@ -37,7 +38,7 @@ namespace FluentSocket.DotNetty
         private readonly IServiceProvider _serviceProvider;
         private readonly ClientSetting _setting;
 
-        private readonly DotNettyClientSetting _dotNettyClientSetting;
+        private readonly DotNettyClientSetting _extraSetting;
         private IEventLoopGroup _group = null;
         private IChannel _clientChannel = null;
         private Bootstrap _bootStrap = null;
@@ -48,7 +49,7 @@ namespace FluentSocket.DotNetty
         private readonly CancellationTokenSource _cts;
         private readonly SemaphoreSlim _semaphoreSlim;
         private readonly ManualResetEventSlim _manualResetEventSlim;
-        private readonly Channel<ReqMessagePacket> _messageReqChannel;
+        private readonly Channel<ReqMessagePacket> _reqMessageChannel;
         private readonly ConcurrentDictionary<short, IRequestMessageHandler> _requestMessageHandlerDict;
         private readonly ConcurrentDictionary<int, ResponseFuture> _responseFutureDict;
 
@@ -62,13 +63,15 @@ namespace FluentSocket.DotNetty
             {
                 _setting.ExtraSettings.Add(new DotNettyClientSetting());
             }
-            _dotNettyClientSetting = (DotNettyClientSetting)_setting.ExtraSettings.FirstOrDefault();
+            _extraSetting = (DotNettyClientSetting)_setting.ExtraSettings.FirstOrDefault();
+
+
 
             _cts = new CancellationTokenSource();
 
             _semaphoreSlim = new SemaphoreSlim(1);
             _manualResetEventSlim = new ManualResetEventSlim(false);
-            _messageReqChannel = Channel.CreateBounded<ReqMessagePacket>(_setting.ReqPacketChannelCapacity);
+            _reqMessageChannel = Channel.CreateBounded<ReqMessagePacket>(_setting.ReqPacketChannelCapacity);
             _requestMessageHandlerDict = new ConcurrentDictionary<short, IRequestMessageHandler>();
             _responseFutureDict = new ConcurrentDictionary<int, ResponseFuture>();
         }
@@ -85,24 +88,24 @@ namespace FluentSocket.DotNetty
 
             try
             {
-                _group = new MultithreadEventLoopGroup(_dotNettyClientSetting.GroupEventLoopCount);
+                _group = new MultithreadEventLoopGroup(_extraSetting.GroupEventLoopCount);
                 _bootStrap = new Bootstrap();
                 _bootStrap.Group(_group);
                 _bootStrap
                     .Channel<TcpSocketChannel>()
-                    .Option(ChannelOption.TcpNodelay, _dotNettyClientSetting.TcpNodelay)
-                    .Option(ChannelOption.SoKeepalive, _dotNettyClientSetting.SoKeepalive)
-                    .Option(ChannelOption.WriteBufferHighWaterMark, _dotNettyClientSetting.WriteBufferHighWaterMark)
-                    .Option(ChannelOption.WriteBufferLowWaterMark, _dotNettyClientSetting.WriteBufferHighWaterMark)
-                    .Option(ChannelOption.SoRcvbuf, _dotNettyClientSetting.SoRcvbuf)
-                    .Option(ChannelOption.SoSndbuf, _dotNettyClientSetting.SoSndbuf)
-                    .Option(ChannelOption.SoReuseaddr, _dotNettyClientSetting.SoReuseaddr)
-                    .Option(ChannelOption.AutoRead, _dotNettyClientSetting.AutoRead)
+                    .Option(ChannelOption.TcpNodelay, _extraSetting.TcpNodelay)
+                    .Option(ChannelOption.SoKeepalive, _extraSetting.SoKeepalive)
+                    .Option(ChannelOption.WriteBufferHighWaterMark, _extraSetting.WriteBufferHighWaterMark)
+                    .Option(ChannelOption.WriteBufferLowWaterMark, _extraSetting.WriteBufferHighWaterMark)
+                    .Option(ChannelOption.SoRcvbuf, _extraSetting.SoRcvbuf)
+                    .Option(ChannelOption.SoSndbuf, _extraSetting.SoSndbuf)
+                    .Option(ChannelOption.SoReuseaddr, _extraSetting.SoReuseaddr)
+                    .Option(ChannelOption.AutoRead, _extraSetting.AutoRead)
                     .Handler(new ActionChannelInitializer<ISocketChannel>(channel =>
                     {
                         IChannelPipeline pipeline = channel.Pipeline;
 
-                        if (_dotNettyClientSetting.IsSsl && _dotNettyClientSetting.TlsCertificate != null)
+                        if (_extraSetting.IsSsl && _extraSetting.TlsCertificate != null)
                         {
                             //var targetHost = _setting.TlsCertificate.GetNameInfo(X509NameType.DnsName, false);
 
@@ -127,7 +130,7 @@ namespace FluentSocket.DotNetty
 
                         //Handler Packet
                         Action<RespMessagePacket> handleRespPacketHandler = HandleRespPacket;
-                        Func<ReqMessagePacket, ValueTask> writeReqPacketHandler = WriteReqPacket;
+                        Func<ReqMessagePacket, IChannelId, ValueTask> writeReqPacketHandler = WriteReqPacketAsync;
                         pipeline.AddLast("PacketHandler", _serviceProvider.CreateInstance<PacketHandler>(handleRespPacketHandler, writeReqPacketHandler));
 
                         Action<bool> channelWritabilityChangedHandler = ChannelWritabilityChanged;
@@ -171,7 +174,7 @@ namespace FluentSocket.DotNetty
 
         /// <summary>Send message async
         /// </summary>
-        public async ValueTask<ResponseMessage> SendMessageAsync(RequestMessage request, int timeoutMillis = 3000)
+        public async ValueTask<ResponseMessage> SendMessageAsync(RequestMessage request, int timeoutMillis = 5000)
         {
             if (_clientChannel == null)
             {
@@ -239,7 +242,7 @@ namespace FluentSocket.DotNetty
         private async Task DoConnectAsync()
         {
             _clientChannel = _setting.LocalEndPoint == null ? await _bootStrap.ConnectAsync(_setting.ServerEndPoint) : await _bootStrap.ConnectAsync(_setting.ServerEndPoint, _setting.LocalEndPoint);
-            _logger.LogInformation($"Client DoConnect! ServerEndPoint:{_clientChannel.RemoteAddress.ToStringAddress()},LocalEndPoint:{_clientChannel.LocalAddress.ToStringAddress()}");
+            _logger.LogInformation($"Client DoConnect! ServerEndPoint:{_setting.ServerEndPoint.ToStringAddress()},LocalEndPoint:{_setting.LocalEndPoint.ToStringAddress()}");
         }
 
         /// <summary>Do reconnect
@@ -341,7 +344,7 @@ namespace FluentSocket.DotNetty
 
         private void StartHandleReqPacketTask()
         {
-            for (int i = 0; i < _dotNettyClientSetting.HandleReqThreadCount; i++)
+            for (int i = 0; i < _extraSetting.HandleReqThreadCount; i++)
             {
                 Task.Factory.StartNew(async () =>
                 {
@@ -383,14 +386,14 @@ namespace FluentSocket.DotNetty
 
         /// <summary>Write the 'Message'
         /// </summary>
-        private ValueTask WriteReqPacket(ReqMessagePacket packet)
+        private ValueTask WriteReqPacketAsync(ReqMessagePacket packet, IChannelId id)
         {
-            return _messageReqChannel.Writer.WriteAsync(packet);
+            return _reqMessageChannel.Writer.WriteAsync(packet);
         }
 
         private async ValueTask HandleReqPacketAsync()
         {
-            var reqMessagePacket = await _messageReqChannel.Reader.ReadAsync(_cts.Token);
+            var reqMessagePacket = await _reqMessageChannel.Reader.ReadAsync(_cts.Token);
             if (!_requestMessageHandlerDict.TryGetValue(reqMessagePacket.Code, out IRequestMessageHandler requestMessageHandler))
             {
                 _logger.LogError("Can't find any 'IRequestMessageHandler' from the dict by code '{0}'! ", reqMessagePacket.Code);

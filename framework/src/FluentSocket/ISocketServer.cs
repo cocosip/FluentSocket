@@ -7,5 +7,9 @@ namespace FluentSocket
         /// <summary>Listening ip address and port
         /// </summary>
         IPEndPoint ListeningEndPoint { get; }
+
+        /// <summary>IsRunning
+        /// </summary>
+        bool IsRunning { get; }
     }
 }

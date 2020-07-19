@@ -6,6 +6,5 @@
         PINGRESP = 2,
         MESSAGEREQ = 3,
         MESSAGERESP = 4
-
     }
 }

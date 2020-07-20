@@ -1,7 +1,6 @@
 ﻿using DotNetty.Handlers.Logging;
 using DotNetty.Transport.Bootstrapping;
 using DotNetty.Transport.Channels;
-using DotNetty.Transport.Channels.Groups;
 using DotNetty.Transport.Channels.Sockets;
 using FluentSocket.DotNetty.Handlers;
 using FluentSocket.Impl;
@@ -35,21 +34,22 @@ namespace FluentSocket.DotNetty
         private readonly ServerSetting _setting;
         private readonly DotNettyServerSetting _extraSetting;
 
+        private readonly ISocketSessionBuilder _socketSessionBuilder;
         private readonly ISocketSessionFactory _sessionFactory;
 
         private IEventLoopGroup _bossGroup = null;
         private IEventLoopGroup _workerGroup = null;
         private IChannel _boundChannel = null;
-        private IChannelGroup _channelGroup = null;
 
         private bool _isRunning = false;
         private int _sequence = 1;
 
         private readonly CancellationTokenSource _cts;
-        private readonly Channel<ReqMessagePacketWrapper> _reqMessageChannel;
+        private readonly Channel<MessageReqPacketWrapper> _messageReqChannel;
         private readonly ConcurrentDictionary<short, IRequestMessageHandler> _requestMessageHandlerDict;
         private readonly ConcurrentDictionary<int, PushFuture> _pushFutureDict;
-        public DotNettySocketServer(ILogger<DotNettySocketServer> logger, IServiceProvider serviceProvider, ServerSetting setting)
+        private readonly ConcurrentDictionary<string, IChannel> _channelDict;
+        public DotNettySocketServer(ILogger<DotNettySocketServer> logger, IServiceProvider serviceProvider, ISocketSessionBuilder socketSessionBuilder, ServerSetting setting)
         {
             _logger = logger;
             _serviceProvider = serviceProvider;
@@ -61,13 +61,15 @@ namespace FluentSocket.DotNetty
             }
             _extraSetting = (DotNettyServerSetting)_setting.ExtraSettings.FirstOrDefault();
 
+            _socketSessionBuilder = socketSessionBuilder;
             _sessionFactory = _serviceProvider.GetService<ISocketSessionFactory>();
 
             _cts = new CancellationTokenSource();
-            _reqMessageChannel = Channel.CreateBounded<ReqMessagePacketWrapper>(_setting.ReqPacketChannelCapacity);
+            _messageReqChannel = Channel.CreateBounded<MessageReqPacketWrapper>(_setting.ReqPacketChannelCapacity);
 
             _requestMessageHandlerDict = new ConcurrentDictionary<short, IRequestMessageHandler>();
             _pushFutureDict = new ConcurrentDictionary<int, PushFuture>();
+            _channelDict = new ConcurrentDictionary<string, IChannel>();
         }
 
         /// <summary>Run socket server
@@ -105,33 +107,28 @@ namespace FluentSocket.DotNetty
                         //    pipeline.AddLast("tls", TlsHandler.Server(_setting.TlsCertificate));
                         //}
 
-                        //Server channel manager
-                        //pipeline.AddLast("channel-manager", _provider.CreateInstance<ServerChannelManagerHandler>(_channelManager, _setting.OnChannelActiveHandler, _setting.OnChannelInActiveHandler));
-                        //RemotingMessage coder and encoder
+                        //coder and encoder
                         pipeline.AddLast(new PacketDecoder(), new PacketEncoder());
 
                         //Handle PingPacket
                         pipeline.AddLast("PingPacketHandler", _serviceProvider.CreateInstance<PingPacketHandler>());
 
+                        //SocketServer handler
+                        Func<string, MessageReqPacket, ValueTask> writeMessageReqPacketHandler = WriteMessageReqPacketAsync;
+                        Action<PushRespPacket> setPushRespPacketHandler = SetPushRespPacket;
+                        Action<IChannel, bool> channelActiveInActiveHandler = ActiveInActiveHandler;
 
-                        //Handle RespPushPacket
-                        pipeline.AddLast("RespPushPacketHandler", _serviceProvider.CreateInstance<RespPushPacketHandler>(new Action<RespPushPacket>(HandleRespPushPacket)));
-
-                        //Handle ReqMessagePacket
-                        pipeline.AddLast("ReqMessagePacketHandler", _serviceProvider.CreateInstance<ReqPacketHandler>(new Func<string, ReqMessagePacket, ValueTask>(WriteReqPacketAsync)));
+                        pipeline.AddLast("SocketServerHandler", _serviceProvider.CreateInstance<SocketServerHandler>(writeMessageReqPacketHandler, setPushRespPacketHandler, channelActiveInActiveHandler));
 
                     }));
-
 
                 _boundChannel = await bootstrap.BindAsync(_setting.ListeningEndPoint);
                 _isRunning = true;
 
                 _logger.LogInformation($"Server Run! ListeningEndPoint:{_setting.ListeningEndPoint}, boundChannel:{_boundChannel.Id.AsShortText()}");
 
-
                 StartScanTimeoutRequestTask();
-
-                StartHandleReqPacketTask();
+                StartHandleMessageReqPacketTask();
             }
             catch (Exception ex)
             {
@@ -142,7 +139,7 @@ namespace FluentSocket.DotNetty
             }
         }
 
-        /// <summary>Send message async
+        /// <summary>Push message async
         /// </summary>
         public async ValueTask<ResponsePush> PushAsync(RequestPush request, ISocketSession session, int timeoutMillis = 5000)
         {
@@ -150,25 +147,55 @@ namespace FluentSocket.DotNetty
             {
                 throw new ArgumentNullException("Server should run first!");
             }
-            //if (!_boundChannel.IsWritable)
-            //{
-            //    _manualResetEventSlim.Wait();
-            //}
+
+            //Get channel from dict
+            if (!_channelDict.TryGetValue(session.SessionId, out IChannel channel))
+            {
+                throw new ArgumentNullException("Can't find session '{0}' channel.", session.SessionId);
+            }
 
             var sequence = Interlocked.Increment(ref _sequence);
-            var messageReqPacket = new ReqMessagePacket()
+            var pushReqPacket = new PushReqPacket()
             {
+                PushType = PushType.Reply,
                 Code = request.Code,
                 Body = request.Body,
             };
             var tcs = new TaskCompletionSource<ResponsePush>();
-            //var responseFuture = new ResponseFuture(request.Code, timeoutMillis, tcs);
-            //if (!_pushFutureDict.TryAdd(sequence, responseFuture))
-            //{
-            //    throw new Exception($"Add 'ResponseFuture' failed. Sequence:{sequence}");
-            //}
-            //await _clientChannel.WriteAndFlushAsync(messageReqPacket);
+            var pushFuture = new PushFuture(request.Code, timeoutMillis, tcs);
+            if (!_pushFutureDict.TryAdd(sequence, pushFuture))
+            {
+                throw new Exception($"Add 'PushFuture' failed. Sequence:{sequence}");
+            }
+            await channel.WriteAndFlushAsync(pushReqPacket);
             return await tcs.Task;
+        }
+
+        /// <summary>Server close
+        /// </summary>
+        public async ValueTask CloseAsync()
+        {
+            if (_boundChannel == null)
+            {
+                return;
+            }
+            try
+            {
+                _isRunning = false;
+                _cts.Cancel(true);
+                await _boundChannel.CloseAsync();
+            }
+            finally
+            {
+                _logger.LogInformation("Server close!");
+                await Task.WhenAll(
+                    _bossGroup.ShutdownGracefullyAsync(TimeSpan.FromMilliseconds(_setting.QuietPeriodMilliSeconds), TimeSpan.FromSeconds(_setting.CloseTimeoutSeconds)),
+                    _workerGroup.ShutdownGracefullyAsync(TimeSpan.FromMilliseconds(_setting.QuietPeriodMilliSeconds), TimeSpan.FromSeconds(_setting.CloseTimeoutSeconds)));
+
+                _boundChannel = null;
+                _bossGroup = null;
+                _workerGroup = null;
+            }
         }
 
         /// <summary>Register RequestHandler
@@ -179,6 +206,13 @@ namespace FluentSocket.DotNetty
             {
                 _logger.LogInformation("Register RequestMessageHandler fail! Code {0}", code);
             }
+        }
+
+        /// <summary>Get sessions
+        /// </summary>
+        public List<ISocketSession> GetSessions(Func<ISocketSession, bool> predicate = null)
+        {
+            return predicate == null ? _sessionFactory.GetAllSessions() : _sessionFactory.GetSessions(predicate);
         }
 
         #region Private Methods
@@ -227,7 +261,7 @@ namespace FluentSocket.DotNetty
             }, TaskCreationOptions.LongRunning);
         }
 
-        private void StartHandleReqPacketTask()
+        private void StartHandleMessageReqPacketTask()
         {
             for (int i = 0; i < _extraSetting.HandleReqThreadCount; i++)
             {
@@ -237,7 +271,7 @@ namespace FluentSocket.DotNetty
                     {
                         try
                         {
-                            await HandleReqPacketAsync();
+                            await HandleMessageReqPacketAsync();
                         }
                         catch (Exception ex)
                         {
@@ -250,29 +284,9 @@ namespace FluentSocket.DotNetty
             }
         }
 
-
-
-        /// <summary>Write the 'Message'
-        /// </summary>
-        private ValueTask WriteReqPacketAsync(string sessionId, ReqMessagePacket packet)
+        private async ValueTask HandleMessageReqPacketAsync()
         {
-            var session = _sessionFactory.GetSession(sessionId);
-            if (session == null)
-            {
-                _logger.LogError("Can't find session by sessionId '{0}'!", sessionId);
-                return new ValueTask();
-            }
-            var wrapper = new ReqMessagePacketWrapper()
-            {
-                Session = session,
-                Packet = packet
-            };
-            return _reqMessageChannel.Writer.WriteAsync(wrapper);
-        }
-
-        private async ValueTask HandleReqPacketAsync()
-        {
-            var wrapper = await _reqMessageChannel.Reader.ReadAsync(_cts.Token);
+            var wrapper = await _messageReqChannel.Reader.ReadAsync(_cts.Token);
             if (wrapper.Packet == null)
             {
                 _logger.LogError("Read packet is null.");
@@ -293,7 +307,7 @@ namespace FluentSocket.DotNetty
 
             var response = await requestMessageHandler.HandleRequestAsync(wrapper.Session, request);
 
-            var respMessagePacket = new RespMessagePacket()
+            var respMessagePacket = new MessageRespPacket()
             {
                 Sequence = wrapper.Packet.Sequence,
                 Code = response.Code,
@@ -303,10 +317,34 @@ namespace FluentSocket.DotNetty
             //await _clientChannel.WriteAndFlushAsync(respMessagePacket);
         }
 
+        /// <summary>Write 'MessageReqPacket' to channel
+        /// </summary>
+        private ValueTask WriteMessageReqPacketAsync(string sessionId, MessageReqPacket packet)
+        {
+            var session = _sessionFactory.GetSession(sessionId);
+            if (session == null)
+            {
+                _logger.LogError("Can't find session by sessionId '{0}'!", sessionId);
+                return new ValueTask();
+            }
+            var wrapper = new MessageReqPacketWrapper()
+            {
+                Session = session,
+                Packet = packet
+            };
+            return _messageReqChannel.Writer.WriteAsync(wrapper);
+        }
+
         /// <summary>Handle the 'RespPushPacket' received from client
         /// </summary>
-        private void HandleRespPushPacket(RespPushPacket packet)
+        private void SetPushRespPacket(PushRespPacket packet)
         {
+            if (packet.PushType != PushType.Reply)
+            {
+                _logger.LogInformation("PushRespPacket type is not 'Reply' , will not set response !");
+                return;
+            }
+
             if (_pushFutureDict.TryRemove(packet.Sequence, out PushFuture pushFuture))
             {
                 var responsePush = new ResponsePush()
@@ -320,6 +358,32 @@ namespace FluentSocket.DotNetty
                 {
                     _logger.LogDebug("Set remoting response failed,Sequence: '{0}'.", packet.Sequence);
                 }
+            }
+        }
+
+        /// <summary>Active InActive handler
+        /// </summary>
+        private void ActiveInActiveHandler(IChannel channel, bool active)
+        {
+
+            if (active)
+            {
+
+                if (!_channelDict.ContainsKey(channel.Id.AsLongText()))
+                {
+                    _channelDict.GetOrAdd(channel.Id.AsLongText(), channel);
+
+                    var session = _socketSessionBuilder.BuildSession(channel.Id.AsLongText(), channel.RemoteAddress, channel.LocalAddress, SocketSessionState.Connected);
+                    _sessionFactory.AddOrUpdateSession(session);
+                }
+            }
+            else
+            {
+                if (!_channelDict.TryRemove(channel.Id.AsLongText(), out IChannel _))
+                {
+                    _logger.LogDebug("Remove channel from dict fail! channel id '{0}'", channel.Id.AsLongText());
+                }
+                _sessionFactory.RemoveSession(channel.Id.AsLongText());
             }
         }
 

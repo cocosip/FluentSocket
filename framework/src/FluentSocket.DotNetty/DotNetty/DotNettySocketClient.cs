@@ -51,7 +51,7 @@ namespace FluentSocket.DotNetty
         private readonly CancellationTokenSource _cts;
         private readonly SemaphoreSlim _semaphoreSlim;
         private readonly ManualResetEventSlim _manualResetEventSlim;
-        private readonly Channel<ReqPushPacket> _reqPushChannel;
+        private readonly Channel<PushReqPacket> _reqPushChannel;
         private readonly ConcurrentDictionary<short, IPushMessageHandler> _pushMessageHandlerDict;
         private readonly ConcurrentDictionary<int, ResponseFuture> _responseFutureDict;
 
@@ -68,13 +68,11 @@ namespace FluentSocket.DotNetty
             }
             _extraSetting = (DotNettyClientSetting)_setting.ExtraSettings.FirstOrDefault();
 
-
-
             _cts = new CancellationTokenSource();
 
             _semaphoreSlim = new SemaphoreSlim(1);
             _manualResetEventSlim = new ManualResetEventSlim(false);
-            _reqPushChannel = Channel.CreateBounded<ReqPushPacket>(_setting.ReqPacketChannelCapacity);
+            _reqPushChannel = Channel.CreateBounded<PushReqPacket>(_setting.ReqPacketChannelCapacity);
             _pushMessageHandlerDict = new ConcurrentDictionary<short, IPushMessageHandler>();
             _responseFutureDict = new ConcurrentDictionary<int, ResponseFuture>();
         }
@@ -131,14 +129,6 @@ namespace FluentSocket.DotNetty
                         //Handle PongPacket
                         pipeline.AddLast("PongPacketHandler", _serviceProvider.CreateInstance<PongPacketHandler>());
 
-                        //Handle RespMessagePacket
-                        pipeline.AddLast("RespPacketHandler", _serviceProvider.CreateInstance<ReqPushPacketHandler>(new Action<RespMessagePacket>(HandleRespPacket)));
-
-                        //Handle ReqPushMessagePacket
-                        pipeline.AddLast("ReqPushPacketHandler", _serviceProvider.CreateInstance<ReqPushPacketHandler>(new Func<ReqPushPacket, ValueTask>(WriteReqPushPacketAsync)));
-
-                        //Handle channel writability changed
-                        pipeline.AddLast("WritabilityChangedHandler", _serviceProvider.CreateInstance<ChannelWritabilityChangedHandler>(new Action<bool>(ChannelWritabilityChanged)));
 
                         //AddPushMessageHandler(pipeline);
 
@@ -147,6 +137,12 @@ namespace FluentSocket.DotNetty
                             //Reconnect to server
                             pipeline.AddLast("ReConnectHandler", _serviceProvider.CreateInstance<ReConnectHandler>(_setting, new Func<Task>(DoReConnectAsync)));
                         }
+
+                        //Socket client
+                        Func<PushReqPacket, ValueTask> writePushReqPacketHandler = WritePushReqPacketAsync;
+                        Action<MessageRespPacket> setMessageRespPacketHandler = SetMessageRespPacket;
+                        Action<bool> channelWritabilityChangedHandler = ChannelWritabilityChanged;
+                        pipeline.AddLast("SocketClientHandler", _serviceProvider.CreateInstance<SocketClientHandler>(writePushReqPacketHandler, setMessageRespPacketHandler, channelWritabilityChangedHandler));
 
                     }));
 
@@ -164,7 +160,7 @@ namespace FluentSocket.DotNetty
                 _isConnected = true;
 
                 StartScanTimeoutRequestTask();
-                StartHandleReqPushPacketTask();
+                StartHandlePushReqPacketTask();
             }
             catch (Exception ex)
             {
@@ -189,7 +185,7 @@ namespace FluentSocket.DotNetty
             }
 
             var sequence = Interlocked.Increment(ref _sequence);
-            var messageReqPacket = new ReqMessagePacket()
+            var messageReqPacket = new MessageReqPacket()
             {
                 Code = request.Code,
                 Body = request.Body,
@@ -354,7 +350,7 @@ namespace FluentSocket.DotNetty
 
         /// <summary>Loop handle 'ReqPushPacket'
         /// </summary>
-        private void StartHandleReqPushPacketTask()
+        private void StartHandlePushReqPacketTask()
         {
             for (int i = 0; i < _extraSetting.HandleReqThreadCount; i++)
             {
@@ -377,32 +373,6 @@ namespace FluentSocket.DotNetty
             }
         }
 
-        /// <summary>Handle the 'RespMessagePacket' received from server
-        /// </summary>
-        private void HandleRespPacket(RespMessagePacket packet)
-        {
-            if (_responseFutureDict.TryRemove(packet.Sequence, out ResponseFuture responseFuture))
-            {
-                var responseMessage = new ResponseMessage()
-                {
-                    Code = packet.Code,
-                    Body = packet.Body
-                };
-
-                if (!responseFuture.SetResponse(responseMessage))
-                {
-                    _logger.LogDebug("Set remoting response failed,Sequence: '{0}'.", packet.Sequence);
-                }
-            }
-        }
-
-        /// <summary>Write the 'Message'
-        /// </summary>
-        private ValueTask WriteReqPushPacketAsync(ReqPushPacket packet)
-        {
-            return _reqPushChannel.Writer.WriteAsync(packet);
-        }
-
         /// <summary>Handle the 'ReqPushPacket' received from server
         /// </summary>
         private async ValueTask HandleReqPushPacketAsync()
@@ -420,16 +390,14 @@ namespace FluentSocket.DotNetty
                 Body = reqPushPacket.Body
             };
 
-            //session
             var response = await handler.HandlePushAsync(request);
-
             switch (reqPushPacket.PushType)
             {
                 case PushType.NoReply:
                 case PushType.Unknow:
                     break;
                 case PushType.Reply:
-                    var respPushMessagePacket = new RespPushPacket()
+                    var respPushMessagePacket = new PushRespPacket()
                     {
                         Sequence = reqPushPacket.Sequence,
                         PushType = reqPushPacket.PushType,
@@ -442,6 +410,33 @@ namespace FluentSocket.DotNetty
                     break;
             }
         }
+
+        /// <summary>Write the 'Message'
+        /// </summary>
+        private ValueTask WritePushReqPacketAsync(PushReqPacket packet)
+        {
+            return _reqPushChannel.Writer.WriteAsync(packet);
+        }
+
+        /// <summary>Handle the 'RespMessagePacket' received from server
+        /// </summary>
+        private void SetMessageRespPacket(MessageRespPacket packet)
+        {
+            if (_responseFutureDict.TryRemove(packet.Sequence, out ResponseFuture responseFuture))
+            {
+                var responseMessage = new ResponseMessage()
+                {
+                    Code = packet.Code,
+                    Body = packet.Body
+                };
+
+                if (!responseFuture.SetResponse(responseMessage))
+                {
+                    _logger.LogDebug("Set remoting response failed,Sequence: '{0}'.", packet.Sequence);
+                }
+            }
+        }
+
 
         private void ChannelWritabilityChanged(bool isWriteable)
         {

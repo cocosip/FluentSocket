@@ -1,6 +1,6 @@
 ﻿namespace FluentSocket.Protocols
 {
-    public class ReqPushPacket : Packet
+    public class PushReqPacket : Packet
     {
         public override PacketType PacketType { get; set; } = PacketType.PUSHREQ;
 

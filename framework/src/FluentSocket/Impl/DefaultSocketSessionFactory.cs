@@ -1,5 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace FluentSocket.Impl
 {
@@ -12,18 +15,14 @@ namespace FluentSocket.Impl
         public DefaultSocketSessionFactory(ILogger<DefaultSocketSessionFactory> logger)
         {
             _logger = logger;
-
             _sessionDict = new ConcurrentDictionary<string, ISocketSession>();
         }
 
         /// <summary>Add session
         /// </summary>
-        public void AddSession(ISocketSession socketSession)
+        public void AddOrUpdateSession(ISocketSession socketSession)
         {
-            if (!_sessionDict.TryAdd(socketSession.SessionId, socketSession))
-            {
-                _logger.LogInformation("Add 'SocketSession' fail,SessionId:{0}", socketSession.SessionId);
-            }
+            _sessionDict.AddOrUpdate(socketSession.SessionId, socketSession, (id, session) => socketSession);
         }
 
         /// <summary>Add or update session
@@ -45,6 +44,20 @@ namespace FluentSocket.Impl
                 _logger.LogInformation("Get session fail,SessionId:{0}.", sessionId);
             }
             return session;
+        }
+
+        /// <summary>Get sessions
+        /// </summary>
+        public List<ISocketSession> GetSessions(Func<ISocketSession, bool> predicate)
+        {
+            return _sessionDict.Values.Where(predicate).ToList();
+        }
+
+        /// <summary>Get all sessions
+        /// </summary>
+        public List<ISocketSession> GetAllSessions()
+        {
+            return _sessionDict.Values.ToList();
         }
 
         /// <summary>Remove session by sessionId

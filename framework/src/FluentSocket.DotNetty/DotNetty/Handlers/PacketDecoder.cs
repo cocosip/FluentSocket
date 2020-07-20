@@ -55,7 +55,7 @@ namespace FluentSocket.DotNetty.Handlers
                     break;
                 case PacketType.MESSAGEREQ:
                     var code = buffer.ReadShort();
-                    var messageReqPacket = new ReqMessagePacket()
+                    var messageReqPacket = new MessageReqPacket()
                     {
                         Sequence = sequence,
                         Code = code,
@@ -66,7 +66,7 @@ namespace FluentSocket.DotNetty.Handlers
                     break;
                 case PacketType.MESSAGERESP:
                     var respCode = buffer.ReadShort();
-                    var messageRespPacket = new RespMessagePacket()
+                    var messageRespPacket = new MessageRespPacket()
                     {
                         Sequence = sequence,
                         Code = respCode,
@@ -78,7 +78,7 @@ namespace FluentSocket.DotNetty.Handlers
                 case PacketType.PUSHREQ:
                     var req_PushType = buffer.ReadByte();
                     var reqPush_Code = buffer.ReadShort();
-                    var reqPushPacket = new ReqPushPacket()
+                    var reqPushPacket = new PushReqPacket()
                     {
                         Sequence = sequence,
                         Code = reqPush_Code,
@@ -91,7 +91,7 @@ namespace FluentSocket.DotNetty.Handlers
                 case PacketType.PUSHRESP:
                     var resp_PushType = buffer.ReadByte();
                     var respPush_Code = buffer.ReadShort();
-                    var respPushPacket = new RespPushPacket()
+                    var respPushPacket = new PushRespPacket()
                     {
                         Sequence = sequence,
                         Code = respPush_Code,

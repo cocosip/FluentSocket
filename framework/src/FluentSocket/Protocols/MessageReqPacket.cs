@@ -1,6 +1,6 @@
 ﻿namespace FluentSocket.Protocols
 {
-    public class ReqMessagePacket : Packet
+    public class MessageReqPacket : Packet
     {
         public override PacketType PacketType { get; set; } = PacketType.MESSAGEREQ;
         public short Code { get; set; }

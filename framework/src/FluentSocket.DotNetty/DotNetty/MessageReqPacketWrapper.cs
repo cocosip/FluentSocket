@@ -2,10 +2,10 @@
 
 namespace FluentSocket.DotNetty
 {
-    public class ReqMessagePacketWrapper
+    public class MessageReqPacketWrapper
     {
         public ISocketSession Session { get; set; }
 
-        public ReqMessagePacket Packet { get; set; }
+        public MessageReqPacket Packet { get; set; }
     }
 }

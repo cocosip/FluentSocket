@@ -38,21 +38,21 @@ namespace FluentSocket.DotNetty.Handlers
                     buffer.WriteInt(1);
                     buffer.WriteByte(pongPacket.PongCode);
                 }
-                else if (packet is ReqMessagePacket reqMessagePacket)
+                else if (packet is MessageReqPacket reqMessagePacket)
                 {
                     var length = 2 + reqMessagePacket.Body.Length;
                     buffer.WriteInt(length);
                     buffer.WriteShort(reqMessagePacket.Code);
                     buffer.WriteBytes(reqMessagePacket.Body);
                 }
-                else if (packet is RespMessagePacket respMessagePacket)
+                else if (packet is MessageRespPacket respMessagePacket)
                 {
                     var length = 2 + respMessagePacket.Body.Length;
                     buffer.WriteInt(length);
                     buffer.WriteShort(respMessagePacket.Code);
                     buffer.WriteBytes(respMessagePacket.Body);
                 }
-                else if (packet is ReqPushPacket reqPushPacket)
+                else if (packet is PushReqPacket reqPushPacket)
                 {
                     var length = 3 + reqPushPacket.Body.Length;
                     buffer.WriteInt(length);
@@ -60,7 +60,7 @@ namespace FluentSocket.DotNetty.Handlers
                     buffer.WriteShort(reqPushPacket.Code);
                     buffer.WriteBytes(reqPushPacket.Body);
                 }
-                else if (packet is RespPushPacket respPushPacket)
+                else if (packet is PushRespPacket respPushPacket)
                 {
                     var length = 3 + respPushPacket.Body.Length;
                     buffer.WriteInt(length);

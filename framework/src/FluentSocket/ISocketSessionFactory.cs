@@ -1,10 +1,13 @@
-﻿namespace FluentSocket.Impl
+﻿using System;
+using System.Collections.Generic;
+
+namespace FluentSocket.Impl
 {
     public interface ISocketSessionFactory
     {
         /// <summary>Add session
         /// </summary>
-        void AddSession(ISocketSession socketSession);
+        void AddOrUpdateSession(ISocketSession socketSession);
 
         /// <summary>Add or update session
         /// </summary>
@@ -13,6 +16,14 @@
         /// <summary>Get Session by sessionId
         /// </summary>
         ISocketSession GetSession(string sessionId);
+
+        /// <summary>Get all sessions
+        /// </summary>
+        List<ISocketSession> GetAllSessions();
+
+        /// <summary>Get sessions
+        /// </summary>
+        List<ISocketSession> GetSessions(Func<ISocketSession, bool> predicate);
 
         /// <summary>Remove session by sessionId
         /// </summary>

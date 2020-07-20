@@ -1,4 +1,9 @@
-﻿using System.Net;
+﻿using FluentSocket.Protocols;
+using FluentSocket.Traffic;
+using System;
+using System.Collections.Generic;
+using System.Net;
+using System.Threading.Tasks;
 
 namespace FluentSocket
 {
@@ -11,5 +16,25 @@ namespace FluentSocket
         /// <summary>IsRunning
         /// </summary>
         bool IsRunning { get; }
+
+        /// <summary>Run socket server
+        /// </summary>
+        ValueTask RunAsync();
+
+        /// <summary>Push message async
+        /// </summary>
+        ValueTask<ResponsePush> PushAsync(RequestPush request, ISocketSession session, int timeoutMillis = 5000);
+
+        /// <summary>Server close
+        /// </summary>
+        ValueTask CloseAsync();
+
+        /// <summary>Register RequestHandler
+        /// </summary>
+        void RegisterRequestHandler(short code, IRequestMessageHandler handler);
+
+        /// <summary>Get sessions
+        /// </summary>
+        List<ISocketSession> GetSessions(Func<ISocketSession, bool> predicate = null);
     }
 }

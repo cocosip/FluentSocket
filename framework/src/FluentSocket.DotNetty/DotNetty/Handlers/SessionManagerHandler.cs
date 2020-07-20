@@ -1,4 +1,5 @@
 ﻿using DotNetty.Transport.Channels;
+using DotNetty.Transport.Channels.Groups;
 using FluentSocket.Utils;
 using Microsoft.Extensions.Logging;
 using System;
@@ -7,12 +8,13 @@ namespace FluentSocket.DotNetty.Handlers
 {
     /// <summary>Channel manager
     /// </summary>
-    public class ServerChannelManagerHandler : ChannelHandlerAdapter
+    public class SessionManagerHandler : ChannelHandlerAdapter
     {
         private readonly ILogger _logger;
-        private Action<IChannelId> _channelActiveHandler;
-        private Action<IChannelId> _channelInactiveHandler;
-        public ServerChannelManagerHandler(ILogger<ServerChannelManagerHandler> logger, Action<IChannelId> channelActiveHandler, Action<IChannelId> channelInactiveHandler)
+        private readonly Action<IChannelId> _channelActiveHandler;
+        private readonly Action<IChannelId> _channelInactiveHandler;
+
+        public SessionManagerHandler(ILogger<SessionManagerHandler> logger, Action<IChannelId> channelActiveHandler, Action<IChannelId> channelInactiveHandler)
         {
             _logger = logger;
             _channelActiveHandler = channelActiveHandler;

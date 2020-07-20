@@ -38,19 +38,35 @@ namespace FluentSocket.DotNetty.Handlers
                     buffer.WriteInt(1);
                     buffer.WriteByte(pongPacket.PongCode);
                 }
-                else if (packet is ReqMessagePacket messageReqPacket)
+                else if (packet is ReqMessagePacket reqMessagePacket)
                 {
-                    var length = 2 + messageReqPacket.Body.Length;
+                    var length = 2 + reqMessagePacket.Body.Length;
                     buffer.WriteInt(length);
-                    buffer.WriteShort(messageReqPacket.Code);
-                    buffer.WriteBytes(messageReqPacket.Body);
+                    buffer.WriteShort(reqMessagePacket.Code);
+                    buffer.WriteBytes(reqMessagePacket.Body);
                 }
-                else if (packet is RespMessagePacket messageRespPacket)
+                else if (packet is RespMessagePacket respMessagePacket)
                 {
-                    var length = 2 + messageRespPacket.Body.Length;
+                    var length = 2 + respMessagePacket.Body.Length;
                     buffer.WriteInt(length);
-                    buffer.WriteShort(messageRespPacket.Code);
-                    buffer.WriteBytes(messageRespPacket.Body);
+                    buffer.WriteShort(respMessagePacket.Code);
+                    buffer.WriteBytes(respMessagePacket.Body);
+                }
+                else if (packet is ReqPushPacket reqPushPacket)
+                {
+                    var length = 3 + reqPushPacket.Body.Length;
+                    buffer.WriteInt(length);
+                    buffer.WriteByte((byte)reqPushPacket.PushType);
+                    buffer.WriteShort(reqPushPacket.Code);
+                    buffer.WriteBytes(reqPushPacket.Body);
+                }
+                else if (packet is RespPushPacket respPushPacket)
+                {
+                    var length = 3 + respPushPacket.Body.Length;
+                    buffer.WriteInt(length);
+                    buffer.WriteByte((byte)respPushPacket.PushType);
+                    buffer.WriteShort(respPushPacket.Code);
+                    buffer.WriteBytes(respPushPacket.Body);
                 }
                 else
                 {

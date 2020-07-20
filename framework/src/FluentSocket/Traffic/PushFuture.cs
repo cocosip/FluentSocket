@@ -4,15 +4,15 @@ using System.Threading.Tasks;
 
 namespace FluentSocket.Traffic
 {
-    public class ResponseFuture
+    public class PushFuture
     {
-        private readonly TaskCompletionSource<ResponseMessage> _taskSource;
+        private readonly TaskCompletionSource<ResponsePush> _taskSource;
 
         public short Code { get; set; }
         public DateTime BeginTime { get; private set; }
         public long TimeoutMillis { get; private set; }
 
-        public ResponseFuture(short code, long timeoutMillis, TaskCompletionSource<ResponseMessage> taskSource)
+        public PushFuture(short code, long timeoutMillis, TaskCompletionSource<ResponsePush> taskSource)
         {
             Code = code;
             TimeoutMillis = timeoutMillis;
@@ -23,7 +23,7 @@ namespace FluentSocket.Traffic
         {
             return (DateTime.Now - BeginTime).TotalMilliseconds > TimeoutMillis;
         }
-        public bool SetResponse(ResponseMessage response)
+        public bool SetResponse(ResponsePush response)
         {
             return _taskSource.TrySetResult(response);
         }

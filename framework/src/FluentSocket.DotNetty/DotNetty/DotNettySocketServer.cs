@@ -4,8 +4,10 @@ using DotNetty.Transport.Channels;
 using DotNetty.Transport.Channels.Groups;
 using DotNetty.Transport.Channels.Sockets;
 using FluentSocket.DotNetty.Handlers;
+using FluentSocket.Impl;
 using FluentSocket.Protocols;
 using FluentSocket.Traffic;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
@@ -33,9 +35,12 @@ namespace FluentSocket.DotNetty
         private readonly ServerSetting _setting;
         private readonly DotNettyServerSetting _extraSetting;
 
+        private readonly ISocketSessionFactory _sessionFactory;
+
         private IEventLoopGroup _bossGroup = null;
         private IEventLoopGroup _workerGroup = null;
         private IChannel _boundChannel = null;
+        private IChannelGroup _channelGroup = null;
 
         private bool _isRunning = false;
         private int _sequence = 1;
@@ -43,7 +48,7 @@ namespace FluentSocket.DotNetty
         private readonly CancellationTokenSource _cts;
         private readonly Channel<ReqMessagePacketWrapper> _reqMessageChannel;
         private readonly ConcurrentDictionary<short, IRequestMessageHandler> _requestMessageHandlerDict;
-        private readonly ConcurrentDictionary<int, ResponseFuture> _responseFutureDict;
+        private readonly ConcurrentDictionary<int, PushFuture> _pushFutureDict;
         public DotNettySocketServer(ILogger<DotNettySocketServer> logger, IServiceProvider serviceProvider, ServerSetting setting)
         {
             _logger = logger;
@@ -56,11 +61,13 @@ namespace FluentSocket.DotNetty
             }
             _extraSetting = (DotNettyServerSetting)_setting.ExtraSettings.FirstOrDefault();
 
+            _sessionFactory = _serviceProvider.GetService<ISocketSessionFactory>();
+
             _cts = new CancellationTokenSource();
             _reqMessageChannel = Channel.CreateBounded<ReqMessagePacketWrapper>(_setting.ReqPacketChannelCapacity);
 
             _requestMessageHandlerDict = new ConcurrentDictionary<short, IRequestMessageHandler>();
-            _responseFutureDict = new ConcurrentDictionary<int, ResponseFuture>();
+            _pushFutureDict = new ConcurrentDictionary<int, PushFuture>();
         }
 
         /// <summary>Run socket server
@@ -106,9 +113,12 @@ namespace FluentSocket.DotNetty
                         //Handle PingPacket
                         pipeline.AddLast("PingPacketHandler", _serviceProvider.CreateInstance<PingPacketHandler>());
 
-                        //Handle the response message
-                        //pipeline.AddLast("push-response", _provider.CreateInstance<PushResponseMessageHandler>(new Action<PushResponseMessage>(HandlePushResponseMessage)));
 
+                        //Handle RespPushPacket
+                        pipeline.AddLast("RespPushPacketHandler", _serviceProvider.CreateInstance<RespPushPacketHandler>(new Action<RespPushPacket>(HandleRespPushPacket)));
+
+                        //Handle ReqMessagePacket
+                        pipeline.AddLast("ReqMessagePacketHandler", _serviceProvider.CreateInstance<ReqPacketHandler>(new Func<string, ReqMessagePacket, ValueTask>(WriteReqPacketAsync)));
 
                     }));
 
@@ -116,8 +126,12 @@ namespace FluentSocket.DotNetty
                 _boundChannel = await bootstrap.BindAsync(_setting.ListeningEndPoint);
                 _isRunning = true;
 
-                StartScanTimeoutRequestTask();
                 _logger.LogInformation($"Server Run! ListeningEndPoint:{_setting.ListeningEndPoint}, boundChannel:{_boundChannel.Id.AsShortText()}");
+
+
+                StartScanTimeoutRequestTask();
+
+                StartHandleReqPacketTask();
             }
             catch (Exception ex)
             {
@@ -130,7 +144,7 @@ namespace FluentSocket.DotNetty
 
         /// <summary>Send message async
         /// </summary>
-        public async ValueTask<ResponseMessage> PushMessageAsync(RequestMessage request, int timeoutMillis = 5000)
+        public async ValueTask<ResponsePush> PushAsync(RequestPush request, ISocketSession session, int timeoutMillis = 5000)
         {
             if (_boundChannel == null)
             {
@@ -147,23 +161,23 @@ namespace FluentSocket.DotNetty
                 Code = request.Code,
                 Body = request.Body,
             };
-            var tcs = new TaskCompletionSource<ResponseMessage>();
-            var responseFuture = new ResponseFuture(request.Code, timeoutMillis, tcs);
-            if (!_responseFutureDict.TryAdd(sequence, responseFuture))
-            {
-                throw new Exception($"Add 'ResponseFuture' failed. Sequence:{sequence}");
-            }
+            var tcs = new TaskCompletionSource<ResponsePush>();
+            //var responseFuture = new ResponseFuture(request.Code, timeoutMillis, tcs);
+            //if (!_pushFutureDict.TryAdd(sequence, responseFuture))
+            //{
+            //    throw new Exception($"Add 'ResponseFuture' failed. Sequence:{sequence}");
+            //}
             //await _clientChannel.WriteAndFlushAsync(messageReqPacket);
             return await tcs.Task;
         }
 
         /// <summary>Register RequestHandler
         /// </summary>
-        public void RegisterRequestMessageHandler(short code, IRequestMessageHandler handler)
+        public void RegisterRequestHandler(short code, IRequestMessageHandler handler)
         {
             if (!_requestMessageHandlerDict.TryAdd(code, handler))
             {
-                _logger.LogInformation("RegisterRequestMessageHandler fail! Code {0}", code);
+                _logger.LogInformation("Register RequestMessageHandler fail! Code {0}", code);
             }
         }
 
@@ -180,7 +194,7 @@ namespace FluentSocket.DotNetty
                     try
                     {
                         var timeoutKeyList = new List<int>();
-                        foreach (var entry in _responseFutureDict)
+                        foreach (var entry in _pushFutureDict)
                         {
                             if (entry.Value.IsTimeout())
                             {
@@ -189,13 +203,14 @@ namespace FluentSocket.DotNetty
                         }
                         foreach (var key in timeoutKeyList)
                         {
-                            if (_responseFutureDict.TryRemove(key, out ResponseFuture responseFuture))
+                            if (_pushFutureDict.TryRemove(key, out PushFuture pushFuture))
                             {
-                                var timeoutResp = new ResponseMessage()
+                                var timeoutResp = new ResponsePush()
                                 {
-                                    Code = responseFuture.Code,
+                                    Code = pushFuture.Code,
+                                    PushType = PushType.Reply
                                 };
-                                responseFuture.SetResponse(timeoutResp);
+                                pushFuture.SetResponse(timeoutResp);
                                 _logger.LogDebug("Removed timeout request, sequence:{0}", _sequence);
                             }
                         }
@@ -235,6 +250,26 @@ namespace FluentSocket.DotNetty
             }
         }
 
+
+
+        /// <summary>Write the 'Message'
+        /// </summary>
+        private ValueTask WriteReqPacketAsync(string sessionId, ReqMessagePacket packet)
+        {
+            var session = _sessionFactory.GetSession(sessionId);
+            if (session == null)
+            {
+                _logger.LogError("Can't find session by sessionId '{0}'!", sessionId);
+                return new ValueTask();
+            }
+            var wrapper = new ReqMessagePacketWrapper()
+            {
+                Session = session,
+                Packet = packet
+            };
+            return _reqMessageChannel.Writer.WriteAsync(wrapper);
+        }
+
         private async ValueTask HandleReqPacketAsync()
         {
             var wrapper = await _reqMessageChannel.Reader.ReadAsync(_cts.Token);
@@ -243,25 +278,24 @@ namespace FluentSocket.DotNetty
                 _logger.LogError("Read packet is null.");
                 return;
             }
-            var reqMessagePacket = wrapper.Packet;
 
-            if (!_requestMessageHandlerDict.TryGetValue(reqMessagePacket.Code, out IRequestMessageHandler requestMessageHandler))
+            if (!_requestMessageHandlerDict.TryGetValue(wrapper.Packet.Code, out IRequestMessageHandler requestMessageHandler))
             {
-                _logger.LogError("Can't find any 'IRequestMessageHandler' from the dict by code '{0}'! ", reqMessagePacket.Code);
+                _logger.LogError("Can't find any 'IRequestMessageHandler' from the dict by code '{0}'! ", wrapper.Packet.Code);
                 return;
             }
 
             var request = new RequestMessage()
             {
-                Code = reqMessagePacket.Code,
-                Body = reqMessagePacket.Body
+                Code = wrapper.Packet.Code,
+                Body = wrapper.Packet.Body
             };
 
-            var response = await requestMessageHandler.HandleRequestAsync(request);
+            var response = await requestMessageHandler.HandleRequestAsync(wrapper.Session, request);
 
             var respMessagePacket = new RespMessagePacket()
             {
-                Sequence = reqMessagePacket.Sequence,
+                Sequence = wrapper.Packet.Sequence,
                 Code = response.Code,
                 Body = response.Body
             };
@@ -269,19 +303,20 @@ namespace FluentSocket.DotNetty
             //await _clientChannel.WriteAndFlushAsync(respMessagePacket);
         }
 
-        /// <summary>Handle the 'MessageRespPacket' received from server
+        /// <summary>Handle the 'RespPushPacket' received from client
         /// </summary>
-        private void HandleRespPacket(RespMessagePacket packet)
+        private void HandleRespPushPacket(RespPushPacket packet)
         {
-            if (_responseFutureDict.TryRemove(packet.Sequence, out ResponseFuture responseFuture))
+            if (_pushFutureDict.TryRemove(packet.Sequence, out PushFuture pushFuture))
             {
-                var responseMessage = new ResponseMessage()
+                var responsePush = new ResponsePush()
                 {
+                    PushType = PushType.Reply,
                     Code = packet.Code,
                     Body = packet.Body
                 };
 
-                if (!responseFuture.SetResponse(responseMessage))
+                if (!pushFuture.SetResponse(responsePush))
                 {
                     _logger.LogDebug("Set remoting response failed,Sequence: '{0}'.", packet.Sequence);
                 }

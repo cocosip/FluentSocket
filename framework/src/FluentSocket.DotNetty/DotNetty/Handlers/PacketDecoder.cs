@@ -75,6 +75,33 @@ namespace FluentSocket.DotNetty.Handlers
                     buffer.ReadBytes(messageRespPacket.Body);
                     output.Add(messageRespPacket);
                     break;
+                case PacketType.PUSHREQ:
+                    var req_PushType = buffer.ReadByte();
+                    var reqPush_Code = buffer.ReadShort();
+                    var reqPushPacket = new ReqPushPacket()
+                    {
+                        Sequence = sequence,
+                        Code = reqPush_Code,
+                        PushType = (PushType)req_PushType,
+                        Body = new byte[length - 3]
+                    };
+                    buffer.ReadBytes(reqPushPacket.Body);
+                    output.Add(reqPushPacket);
+                    break;
+                case PacketType.PUSHRESP:
+                    var resp_PushType = buffer.ReadByte();
+                    var respPush_Code = buffer.ReadShort();
+                    var respPushPacket = new RespPushPacket()
+                    {
+                        Sequence = sequence,
+                        Code = respPush_Code,
+                        PushType = (PushType)resp_PushType,
+                        Body = new byte[length - 3]
+                    };
+                    buffer.ReadBytes(respPushPacket.Body);
+                    output.Add(respPushPacket);
+                    break;
+
                 default:
                     throw new ArgumentException("Invalid packet type!");
             }

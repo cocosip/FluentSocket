@@ -6,12 +6,12 @@ using System.Net;
 
 namespace FluentSocket
 {
-    public class FluentSocketFactory : IFluentSocketFactory
+    public class DefaultFluentSocketFactory : IFluentSocketFactory
     {
         private readonly ILogger _logger;
         private readonly IServiceProvider _serviceProvider;
 
-        public FluentSocketFactory(ILogger<FluentSocketFactory> logger, IServiceProvider serviceProvider)
+        public DefaultFluentSocketFactory(ILogger<DefaultFluentSocketFactory> logger, IServiceProvider serviceProvider)
         {
             _logger = logger;
             _serviceProvider = serviceProvider;

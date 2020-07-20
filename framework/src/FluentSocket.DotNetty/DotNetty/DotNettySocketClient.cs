@@ -2,7 +2,6 @@
 using DotNetty.Handlers.Timeout;
 using DotNetty.Transport.Bootstrapping;
 using DotNetty.Transport.Channels;
-using DotNetty.Transport.Channels.Groups;
 using DotNetty.Transport.Channels.Sockets;
 using FluentSocket.DotNetty.Handlers;
 using FluentSocket.Protocols;
@@ -36,12 +35,15 @@ namespace FluentSocket.DotNetty
 
         private readonly ILogger _logger;
         private readonly IServiceProvider _serviceProvider;
+        private readonly ISocketSessionBuilder _socketSessionBuilder;
         private readonly ClientSetting _setting;
 
         private readonly DotNettyClientSetting _extraSetting;
         private IEventLoopGroup _group = null;
         private IChannel _clientChannel = null;
         private Bootstrap _bootStrap = null;
+        private ISocketSession _session = null;
+
         private bool _isConnected = false;
         private int _reConnectAttempt = 0;
         private int _sequence = 1;
@@ -49,14 +51,15 @@ namespace FluentSocket.DotNetty
         private readonly CancellationTokenSource _cts;
         private readonly SemaphoreSlim _semaphoreSlim;
         private readonly ManualResetEventSlim _manualResetEventSlim;
-        private readonly Channel<ReqMessagePacket> _reqMessageChannel;
-        private readonly ConcurrentDictionary<short, IRequestMessageHandler> _requestMessageHandlerDict;
+        private readonly Channel<ReqPushPacket> _reqPushChannel;
+        private readonly ConcurrentDictionary<short, IPushMessageHandler> _pushMessageHandlerDict;
         private readonly ConcurrentDictionary<int, ResponseFuture> _responseFutureDict;
 
-        public DotNettySocketClient(ILogger<DotNettySocketClient> logger, IServiceProvider serviceProvider, ClientSetting setting)
+        public DotNettySocketClient(ILogger<DotNettySocketClient> logger, IServiceProvider serviceProvider, ISocketSessionBuilder socketSessionBuilder, ClientSetting setting)
         {
             _logger = logger;
             _serviceProvider = serviceProvider;
+            _socketSessionBuilder = socketSessionBuilder;
 
             _setting = setting;
             if (!_setting.ExtraSettings.Any())
@@ -71,8 +74,8 @@ namespace FluentSocket.DotNetty
 
             _semaphoreSlim = new SemaphoreSlim(1);
             _manualResetEventSlim = new ManualResetEventSlim(false);
-            _reqMessageChannel = Channel.CreateBounded<ReqMessagePacket>(_setting.ReqPacketChannelCapacity);
-            _requestMessageHandlerDict = new ConcurrentDictionary<short, IRequestMessageHandler>();
+            _reqPushChannel = Channel.CreateBounded<ReqPushPacket>(_setting.ReqPacketChannelCapacity);
+            _pushMessageHandlerDict = new ConcurrentDictionary<short, IPushMessageHandler>();
             _responseFutureDict = new ConcurrentDictionary<int, ResponseFuture>();
         }
 
@@ -128,13 +131,14 @@ namespace FluentSocket.DotNetty
                         //Handle PongPacket
                         pipeline.AddLast("PongPacketHandler", _serviceProvider.CreateInstance<PongPacketHandler>());
 
-                        //Handler Packet
-                        Action<RespMessagePacket> handleRespPacketHandler = HandleRespPacket;
-                        Func<ReqMessagePacket, IChannelId, ValueTask> writeReqPacketHandler = WriteReqPacketAsync;
-                        pipeline.AddLast("PacketHandler", _serviceProvider.CreateInstance<PacketHandler>(handleRespPacketHandler, writeReqPacketHandler));
+                        //Handle RespMessagePacket
+                        pipeline.AddLast("RespPacketHandler", _serviceProvider.CreateInstance<ReqPushPacketHandler>(new Action<RespMessagePacket>(HandleRespPacket)));
 
-                        Action<bool> channelWritabilityChangedHandler = ChannelWritabilityChanged;
-                        pipeline.AddLast("WritabilityChangedHandler", _serviceProvider.CreateInstance<ChannelWritabilityChangedHandler>(channelWritabilityChangedHandler));
+                        //Handle ReqPushMessagePacket
+                        pipeline.AddLast("ReqPushPacketHandler", _serviceProvider.CreateInstance<ReqPushPacketHandler>(new Func<ReqPushPacket, ValueTask>(WriteReqPushPacketAsync)));
+
+                        //Handle channel writability changed
+                        pipeline.AddLast("WritabilityChangedHandler", _serviceProvider.CreateInstance<ChannelWritabilityChangedHandler>(new Action<bool>(ChannelWritabilityChanged)));
 
                         //AddPushMessageHandler(pipeline);
 
@@ -160,8 +164,7 @@ namespace FluentSocket.DotNetty
                 _isConnected = true;
 
                 StartScanTimeoutRequestTask();
-
-                StartHandleReqPacketTask();
+                StartHandleReqPushPacketTask();
             }
             catch (Exception ex)
             {
@@ -225,13 +228,13 @@ namespace FluentSocket.DotNetty
             }
         }
 
-        /// <summary>Register RequestHandler
+        /// <summary>Register PushMessageHandler
         /// </summary>
-        public void RegisterRequestMessageHandler(short code, IRequestMessageHandler handler)
+        public void RegisterPushHandler(short code, IPushMessageHandler handler)
         {
-            if (!_requestMessageHandlerDict.TryAdd(code, handler))
+            if (!_pushMessageHandlerDict.TryAdd(code, handler))
             {
-                _logger.LogInformation("RegisterRequestMessageHandler fail! Code {0}", code);
+                _logger.LogInformation("Register 'PushMessageHandler' fail! Code {0}", code);
             }
         }
 
@@ -242,6 +245,13 @@ namespace FluentSocket.DotNetty
         private async Task DoConnectAsync()
         {
             _clientChannel = _setting.LocalEndPoint == null ? await _bootStrap.ConnectAsync(_setting.ServerEndPoint) : await _bootStrap.ConnectAsync(_setting.ServerEndPoint, _setting.LocalEndPoint);
+
+            if (_clientChannel != null)
+            {
+                //Session
+                _session = _socketSessionBuilder.BuildSession(_clientChannel.Id.AsLongText(), _clientChannel.RemoteAddress, _clientChannel.LocalAddress, SocketSessionState.Connected);
+            }
+
             _logger.LogInformation($"Client DoConnect! ServerEndPoint:{_setting.ServerEndPoint.ToStringAddress()},LocalEndPoint:{_setting.LocalEndPoint.ToStringAddress()}");
         }
 
@@ -342,7 +352,9 @@ namespace FluentSocket.DotNetty
             }, TaskCreationOptions.LongRunning);
         }
 
-        private void StartHandleReqPacketTask()
+        /// <summary>Loop handle 'ReqPushPacket'
+        /// </summary>
+        private void StartHandleReqPushPacketTask()
         {
             for (int i = 0; i < _extraSetting.HandleReqThreadCount; i++)
             {
@@ -352,7 +364,7 @@ namespace FluentSocket.DotNetty
                     {
                         try
                         {
-                            await HandleReqPacketAsync();
+                            await HandleReqPushPacketAsync();
                         }
                         catch (Exception ex)
                         {
@@ -365,7 +377,7 @@ namespace FluentSocket.DotNetty
             }
         }
 
-        /// <summary>Handle the 'MessageRespPacket' received from server
+        /// <summary>Handle the 'RespMessagePacket' received from server
         /// </summary>
         private void HandleRespPacket(RespMessagePacket packet)
         {
@@ -386,36 +398,49 @@ namespace FluentSocket.DotNetty
 
         /// <summary>Write the 'Message'
         /// </summary>
-        private ValueTask WriteReqPacketAsync(ReqMessagePacket packet, IChannelId id)
+        private ValueTask WriteReqPushPacketAsync(ReqPushPacket packet)
         {
-            return _reqMessageChannel.Writer.WriteAsync(packet);
+            return _reqPushChannel.Writer.WriteAsync(packet);
         }
 
-        private async ValueTask HandleReqPacketAsync()
+        /// <summary>Handle the 'ReqPushPacket' received from server
+        /// </summary>
+        private async ValueTask HandleReqPushPacketAsync()
         {
-            var reqMessagePacket = await _reqMessageChannel.Reader.ReadAsync(_cts.Token);
-            if (!_requestMessageHandlerDict.TryGetValue(reqMessagePacket.Code, out IRequestMessageHandler requestMessageHandler))
+            var reqPushPacket = await _reqPushChannel.Reader.ReadAsync(_cts.Token);
+            if (!_pushMessageHandlerDict.TryGetValue(reqPushPacket.Code, out IPushMessageHandler handler))
             {
-                _logger.LogError("Can't find any 'IRequestMessageHandler' from the dict by code '{0}'! ", reqMessagePacket.Code);
+                _logger.LogWarning("Can't find any 'IPushMessageHandler' from the dict by code '{0}'! ", reqPushPacket.Code);
                 return;
             }
 
-            var request = new RequestMessage()
+            var request = new RequestPush()
             {
-                Code = reqMessagePacket.Code,
-                Body = reqMessagePacket.Body
+                Code = reqPushPacket.Code,
+                Body = reqPushPacket.Body
             };
 
-            var response = await requestMessageHandler.HandleRequestAsync(request);
+            //session
+            var response = await handler.HandlePushAsync(request);
 
-            var respMessagePacket = new RespMessagePacket()
+            switch (reqPushPacket.PushType)
             {
-                Sequence = reqMessagePacket.Sequence,
-                Code = response.Code,
-                Body = response.Body
-            };
-
-            await _clientChannel.WriteAndFlushAsync(respMessagePacket);
+                case PushType.NoReply:
+                case PushType.Unknow:
+                    break;
+                case PushType.Reply:
+                    var respPushMessagePacket = new RespPushPacket()
+                    {
+                        Sequence = reqPushPacket.Sequence,
+                        PushType = reqPushPacket.PushType,
+                        Code = response.Code,
+                        Body = response.Body
+                    };
+                    await _clientChannel.WriteAndFlushAsync(respPushMessagePacket);
+                    break;
+                default:
+                    break;
+            }
         }
 
         private void ChannelWritabilityChanged(bool isWriteable)

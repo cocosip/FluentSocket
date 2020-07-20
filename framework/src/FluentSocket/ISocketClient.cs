@@ -31,8 +31,8 @@ namespace FluentSocket
         /// </summary>
         ValueTask CloseAsync();
 
-        /// <summary>Register RequestHandler
+        /// <summary>Register PushMessageHandler
         /// </summary>
-        void RegisterRequestMessageHandler(short code, IRequestMessageHandler handler);
+        void RegisterPushHandler(short code, IPushMessageHandler handler);
     }
 }

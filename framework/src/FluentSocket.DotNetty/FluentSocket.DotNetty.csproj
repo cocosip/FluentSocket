@@ -12,7 +12,6 @@
   
   <ItemGroup>
     <PackageReference Include="DotNetty.Handlers" Version="0.6.0" />
-    <PackageReference Include="System.Threading.Channels" Version="4.7.1" />
   </ItemGroup>
   
   <ItemGroup>

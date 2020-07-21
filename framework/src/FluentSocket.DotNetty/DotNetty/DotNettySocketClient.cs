@@ -43,7 +43,6 @@ namespace FluentSocket.DotNetty
         private IEventLoopGroup _group = null;
         private IChannel _clientChannel = null;
         private Bootstrap _bootStrap = null;
-        private ISocketSession _session = null;
 
         private bool _isConnected = false;
         private int _reConnectAttempt = 0;
@@ -72,7 +71,7 @@ namespace FluentSocket.DotNetty
             _cts = new CancellationTokenSource();
 
             _semaphoreSlim = new SemaphoreSlim(1);
-            _manualResetEventSlim = new ManualResetEventSlim(false);
+            _manualResetEventSlim = new ManualResetEventSlim(true);
             _reqPushChannel = Channel.CreateBounded<PushReqPacket>(_setting.PushReqCapacity);
             _pushMessageHandlerDict = new ConcurrentDictionary<short, IPushMessageHandler>();
             _responseFutureDict = new ConcurrentDictionary<int, ResponseFuture>();
@@ -133,18 +132,17 @@ namespace FluentSocket.DotNetty
                         //Handle PongPacket
                         pipeline.AddLast("PongPacketHandler", _app.ServiceProvider.CreateInstance<PongPacketHandler>());
 
+                        //Socket client
+                        Func<PushReqPacket, ValueTask> writePushReqPacketHandler = WritePushReqPacketAsync;
+                        Action<MessageRespPacket> setMessageRespPacketHandler = SetMessageRespPacket;
+                        Action channelWritabilityChangedHandler = ChannelWritabilityChanged;
+                        pipeline.AddLast("SocketClientHandler", _app.ServiceProvider.CreateInstance<SocketClientHandler>(writePushReqPacketHandler, setMessageRespPacketHandler, channelWritabilityChangedHandler));
 
                         if (_setting.EnableReConnect)
                         {
                             //Reconnect to server
                             pipeline.AddLast("ReConnectHandler", _app.ServiceProvider.CreateInstance<ReConnectHandler>(_setting, new Func<Task>(DoReConnectAsync)));
                         }
-
-                        //Socket client
-                        Func<PushReqPacket, ValueTask> writePushReqPacketHandler = WritePushReqPacketAsync;
-                        Action<MessageRespPacket> setMessageRespPacketHandler = SetMessageRespPacket;
-                        Action<bool> channelWritabilityChangedHandler = ChannelWritabilityChanged;
-                        pipeline.AddLast("SocketClientHandler", _app.ServiceProvider.CreateInstance<SocketClientHandler>(writePushReqPacketHandler, setMessageRespPacketHandler, channelWritabilityChangedHandler));
 
                     }));
 
@@ -241,15 +239,16 @@ namespace FluentSocket.DotNetty
 
         /// <summary>DoConnect to the server
         /// </summary>
-        private async Task DoConnectAsync()
+        private async ValueTask DoConnectAsync()
         {
+            if (_clientChannel.Active)
+            {
+                _logger.LogInformation("Channel '{0}' is active,will not do connect!", _clientChannel?.Id.AsLongText());
+                return;
+            }
+
             _clientChannel = _setting.LocalEndPoint == null ? await _bootStrap.ConnectAsync(_setting.ServerEndPoint) : await _bootStrap.ConnectAsync(_setting.ServerEndPoint, _setting.LocalEndPoint);
 
-            if (_clientChannel != null)
-            {
-                //Session
-                _session = _socketSessionBuilder.BuildSession(_clientChannel.Id.AsLongText(), _clientChannel.RemoteAddress, _clientChannel.LocalAddress, SocketSessionState.Connected);
-            }
 
             _logger.LogInformation($"Client DoConnect! ServerEndPoint:{_setting.ServerEndPoint.ToStringAddress()},LocalEndPoint:{_setting.LocalEndPoint?.ToStringAddress()}");
         }
@@ -267,7 +266,7 @@ namespace FluentSocket.DotNetty
             //Current channel is active
             if (_clientChannel.Active)
             {
-                _logger.LogDebug("Current channel is close,it will not reconnect! channel id:{0}", _clientChannel?.Id.AsShortText());
+                _logger.LogDebug("Current channel is active,it will not reconnect! channel id:{0}", _clientChannel?.Id.AsShortText());
                 return;
             }
 
@@ -445,9 +444,9 @@ namespace FluentSocket.DotNetty
         }
 
 
-        private void ChannelWritabilityChanged(bool isWriteable)
+        private void ChannelWritabilityChanged()
         {
-            if (isWriteable)
+            if (_clientChannel.IsWritable)
             {
                 _manualResetEventSlim.Set();
             }

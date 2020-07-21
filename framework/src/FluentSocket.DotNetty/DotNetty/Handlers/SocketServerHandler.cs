@@ -41,12 +41,14 @@ namespace FluentSocket.DotNetty.Handlers
 
         public override void ChannelActive(IChannelHandlerContext context)
         {
+            _logger.LogInformation("Channel active '{0}'", context.Channel.Id.AsLongText());
             _activeInActiveHandler(context.Channel, true);
             context.FireChannelActive();
         }
 
         public override void ChannelInactive(IChannelHandlerContext context)
         {
+            _logger.LogInformation("Channel inActive '{0}'", context.Channel.Id.AsLongText());
             _activeInActiveHandler(context.Channel, false);
             context.FireChannelInactive();
         }

@@ -36,8 +36,7 @@ namespace FluentSocket.Samples.Message.DotNetty.ServerHost
                     l.SetMinimumLevel(LogLevel.Debug);
                     l.AddConsole();
                 })
-                .AddSerialize()
-                .AddPerformance()
+                .AddSamples()
                 .AddFluentSocket()
                 .AddFluentSocketDotNetty()
                 ;
@@ -49,8 +48,8 @@ namespace FluentSocket.Samples.Message.DotNetty.ServerHost
             var setting = new ServerSetting()
             {
                 ListeningEndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 21000),
-                HandleMessageReqThread = 3,
-                MessageReqCapacity = 100000,
+                HandleMessageReqThread = 1,
+                MessageReqCapacity = 10000,
             };
             _socketServer = socketFactory.CreateServer(setting);
 

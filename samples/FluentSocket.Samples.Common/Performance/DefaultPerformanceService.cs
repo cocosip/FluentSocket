@@ -1,8 +1,8 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using FluentSocket.Samples.Common.Scheduling;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace FluentSocket.Samples.Common.Performance
 {
@@ -14,6 +14,7 @@ namespace FluentSocket.Samples.Common.Performance
 
         private readonly ILogger _logger;
         private readonly ConcurrentDictionary<string, CountInfo> _countInfoDict;
+        private readonly IScheduleService _scheduleService;
         public string Name
         {
             get { return _name; }
@@ -23,13 +24,11 @@ namespace FluentSocket.Samples.Common.Performance
             get { return _setting; }
         }
 
-        private readonly CancellationTokenSource _cts;
-
-        public DefaultPerformanceService(ILogger<DefaultPerformanceService> logger)
+        public DefaultPerformanceService(ILogger<DefaultPerformanceService> logger, IScheduleService scheduleService)
         {
             _logger = logger;
+            _scheduleService = scheduleService;
             _countInfoDict = new ConcurrentDictionary<string, CountInfo>();
-            _cts = new CancellationTokenSource();
         }
 
         public IPerformanceService Initialize(string name, PerformanceServiceSetting setting = null)
@@ -60,29 +59,13 @@ namespace FluentSocket.Samples.Common.Performance
             {
                 throw new Exception(string.Format("Please initialize the {0} before start it.", GetType().FullName));
             }
-
-            Task.Factory.StartNew(async () =>
+            _scheduleService.StartTask(_taskName, () =>
             {
-                await Task.Delay(_setting.StatIntervalSeconds * 1000);
-
-                while (!_cts.Token.IsCancellationRequested)
+                foreach (var entry in _countInfoDict)
                 {
-                    try
-                    {
-                        foreach (var entry in _countInfoDict)
-                        {
-                            entry.Value.Calculate();
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError("DefaultPerformanceService Caught Some Exception,{0}", ex.Message);
-                    }
-                    await Task.Delay(_setting.StatIntervalSeconds * 1000);
+                    entry.Value.Calculate();
                 }
-
-            }, TaskCreationOptions.LongRunning);
-
+            }, _setting.StatIntervalSeconds * 1000, _setting.StatIntervalSeconds * 1000);
         }
         public void Stop()
         {
@@ -90,8 +73,7 @@ namespace FluentSocket.Samples.Common.Performance
             {
                 return;
             }
-
-            _cts.Cancel();
+            _scheduleService.StopTask(_taskName);
         }
 
         public void IncrementKeyCount(string key, double rtMilliseconds)

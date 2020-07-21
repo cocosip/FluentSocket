@@ -33,5 +33,6 @@ namespace FluentSocket.DotNetty.Handlers
             _logger.LogInformation("Channel:{0} is inactive!", context.Channel.Id.AsLongText());
             context.Channel.EventLoop.Schedule(() => _reConnectAction(), TimeSpan.FromSeconds(_setting.ReConnectDelaySeconds));
         }
+
     }
 }

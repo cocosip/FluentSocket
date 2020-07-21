@@ -11,8 +11,8 @@ namespace FluentSocket.DotNetty.Handlers
         private readonly ILogger _logger;
         private readonly Func<PushReqPacket, ValueTask> _writePushReqPacketHandler;
         private readonly Action<MessageRespPacket> _setMessageRespPacketHandler;
-        private readonly Action<bool> _channelWritabilityChangedHandler;
-        public SocketClientHandler(ILogger<SocketClientHandler> logger, Func<PushReqPacket, ValueTask> writePushReqPacketHandler, Action<MessageRespPacket> setMessageRespPacketHandler, Action<bool> channelWritabilityChangedHandler)
+        private readonly Action _channelWritabilityChangedHandler;
+        public SocketClientHandler(ILogger<SocketClientHandler> logger, Func<PushReqPacket, ValueTask> writePushReqPacketHandler, Action<MessageRespPacket> setMessageRespPacketHandler, Action channelWritabilityChangedHandler)
         {
             _logger = logger;
             _writePushReqPacketHandler = writePushReqPacketHandler;
@@ -39,8 +39,16 @@ namespace FluentSocket.DotNetty.Handlers
 
         public override void ChannelWritabilityChanged(IChannelHandlerContext context)
         {
-            _channelWritabilityChangedHandler(context.Channel.IsWritable);
+            _logger.LogInformation("Channel '{0}' WritabilityChanged,current is '{1}'", context.Channel.Id.AsLongText(), context.Channel.IsWritable);
+            _channelWritabilityChangedHandler();
+            context.FireChannelWritabilityChanged();
         }
+
+        public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
+        {
+            _logger.LogError(exception, "Channel '{0}' caught some exception,{1}.", context?.Channel.Id.AsLongText());
+        }
+
 
 
     }

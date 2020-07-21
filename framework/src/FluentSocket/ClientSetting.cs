@@ -14,7 +14,7 @@ namespace FluentSocket
 
         /// <summary>Enable client to reConnect the server
         /// </summary>
-        public bool EnableReConnect { get; set; } = false;
+        public bool EnableReConnect { get; set; } = true;
 
         /// <summary>ReConnect delay seconds (default is 3s)
         /// </summary>
@@ -22,7 +22,7 @@ namespace FluentSocket
 
         /// <summary>Try reConnect max count
         /// </summary>
-        public int ReConnectMaxCount { get; set; } = 10;
+        public int ReConnectMaxCount { get; set; } = 100;
 
         /// <summary>Enable heartbeat (default is false)
         /// </summary>

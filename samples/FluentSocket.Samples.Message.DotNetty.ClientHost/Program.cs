@@ -36,42 +36,48 @@ namespace FluentSocket.Samples.Message.DotNetty.ClientHost
         {
             _performanceService.Start();
             await _client.ConnectAsync();
+            _performanceService.Start();
             StartSendMessageTest();
         }
 
         static void StartSendMessageTest()
         {
-            Task.Factory.StartNew(async () =>
+            for (int i = 0; i < 5; i++)
             {
-                await Task.Delay(2000);
-                var serializer = _serviceProvider.GetService<IBinarySerializer>();
 
-                while (!_cts.Token.IsCancellationRequested)
+                Task.Factory.StartNew(async () =>
                 {
-                    if (_sendCount < 100000)
+                    var serializer = _serviceProvider.GetService<IBinarySerializer>();
+                    while (!_cts.Token.IsCancellationRequested)
                     {
-                        try
+                        if (_sendCount < 1000000)
                         {
-                            var message = new TimeRequestMessage()
+                            try
                             {
-                                CreateTime = DateTime.Now,
-                                Content = Encoding.UTF8.GetBytes("Hello world!")
-                            };
-                            var responseMessage = await _client.SendMessageAsync(new RequestMessage()
+                                var message = new TimeRequestMessage()
+                                {
+                                    CreateTime = DateTime.Now,
+                                    Content = Encoding.UTF8.GetBytes($"{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss fff")}")
+                                };
+                                var responseMessage = await _client.SendMessageAsync(new RequestMessage()
+                                {
+                                    Code = 100,
+                                    Body = serializer.Serialize(message)
+                                });
+
+                                //_logger.LogDebug("接收数据:{0}", Encoding.UTF8.GetString(responseMessage.Body));
+                                _performanceService.IncrementKeyCount("Async", (DateTime.Now - message.CreateTime).TotalMilliseconds);
+                                Interlocked.Increment(ref _sendCount);
+                            }
+                            catch (Exception ex)
                             {
-                                Code = 100,
-                                Body = serializer.Serialize(message)
-                            });
-                            Interlocked.Increment(ref _sendCount);
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, "Send message has exception:{0}", ex.Message);
+                                _logger.LogError(ex, "Send message has exception:{0}", ex.Message);
+                            }
                         }
                     }
-                }
 
-            }, TaskCreationOptions.LongRunning);
+                }, TaskCreationOptions.LongRunning);
+            }
         }
 
         static void InitializeFluentSocket()
@@ -97,7 +103,7 @@ namespace FluentSocket.Samples.Message.DotNetty.ClientHost
                 EnableReConnect = false,
                 ReConnectDelaySeconds = 3,
                 ServerEndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 21000),
-                //GroupEventLoopCount = 2
+                PushReqCapacity = 50000,
             };
 
             _client = socketFactory.CreateClient(setting);

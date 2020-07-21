@@ -34,7 +34,7 @@ namespace FluentSocket
 
         /// <summary>'PushReqPacket' channel capacity
         /// </summary>
-        public int PushReqCapacity { get; set; } = 5000;
+        public int PushReqCapacity { get; set; } = 20000;
 
         /// <summary>Thread count of handle 'PushReqPacket'
         /// </summary>

@@ -21,6 +21,7 @@ namespace FluentSocket.DotNetty.Handlers
         {
             IByteBuffer buffer = bufferAllocator.Buffer();
 
+
             try
             {
                 // 1 byte PacketType
@@ -30,43 +31,37 @@ namespace FluentSocket.DotNetty.Handlers
 
                 if (packet is PingPacket pingPacket)
                 {
-                    buffer.WriteInt(1);
                     buffer.WriteByte(pingPacket.PingCode);
                 }
                 else if (packet is PongPacket pongPacket)
                 {
-                    buffer.WriteInt(1);
                     buffer.WriteByte(pongPacket.PongCode);
                 }
-                else if (packet is MessageReqPacket reqMessagePacket)
+                else if (packet is MessageReqPacket messageReqPacket)
                 {
-                    var length = 2 + reqMessagePacket.Body.Length;
-                    buffer.WriteInt(length);
-                    buffer.WriteShort(reqMessagePacket.Code);
-                    buffer.WriteBytes(reqMessagePacket.Body);
+                    buffer.WriteShort(messageReqPacket.Code);
+                    buffer.WriteInt(messageReqPacket.Body.Length);
+                    buffer.WriteBytes(messageReqPacket.Body);
                 }
-                else if (packet is MessageRespPacket respMessagePacket)
+                else if (packet is MessageRespPacket messageRespPacket)
                 {
-                    var length = 2 + respMessagePacket.Body.Length;
-                    buffer.WriteInt(length);
-                    buffer.WriteShort(respMessagePacket.Code);
-                    buffer.WriteBytes(respMessagePacket.Body);
+                    buffer.WriteShort(messageRespPacket.Code);
+                    buffer.WriteInt(messageRespPacket.Body.Length);
+                    buffer.WriteBytes(messageRespPacket.Body);
                 }
-                else if (packet is PushReqPacket reqPushPacket)
+                else if (packet is PushReqPacket pushReqPacket)
                 {
-                    var length = 3 + reqPushPacket.Body.Length;
-                    buffer.WriteInt(length);
-                    buffer.WriteByte((byte)reqPushPacket.PushType);
-                    buffer.WriteShort(reqPushPacket.Code);
-                    buffer.WriteBytes(reqPushPacket.Body);
+                    buffer.WriteByte((byte)pushReqPacket.PushType);
+                    buffer.WriteShort(pushReqPacket.Code);
+                    buffer.WriteInt(pushReqPacket.Body.Length);
+                    buffer.WriteBytes(pushReqPacket.Body);
                 }
-                else if (packet is PushRespPacket respPushPacket)
+                else if (packet is PushRespPacket pushRespPacket)
                 {
-                    var length = 3 + respPushPacket.Body.Length;
-                    buffer.WriteInt(length);
-                    buffer.WriteByte((byte)respPushPacket.PushType);
-                    buffer.WriteShort(respPushPacket.Code);
-                    buffer.WriteBytes(respPushPacket.Body);
+                    buffer.WriteByte((byte)pushRespPacket.PushType);
+                    buffer.WriteShort(pushRespPacket.Code);
+                    buffer.WriteInt(pushRespPacket.Body.Length);
+                    buffer.WriteBytes(pushRespPacket.Body);
                 }
                 else
                 {

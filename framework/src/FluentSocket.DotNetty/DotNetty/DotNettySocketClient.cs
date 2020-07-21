@@ -1,4 +1,5 @@
-﻿using DotNetty.Handlers.Logging;
+﻿using DotNetty.Codecs;
+using DotNetty.Handlers.Logging;
 using DotNetty.Handlers.Timeout;
 using DotNetty.Transport.Bootstrapping;
 using DotNetty.Transport.Channels;
@@ -112,6 +113,9 @@ namespace FluentSocket.DotNetty
 
                             //pipeline.AddLast("tls", new TlsHandler(stream => new SslStream(stream, true, (sender, certificate, chain, errors) => true), new ClientTlsSettings(targetHost)));
                         }
+
+                        pipeline.AddLast("framing-enc", new LengthFieldPrepender(4));
+                        pipeline.AddLast("framing-dec", new LengthFieldBasedFrameDecoder(int.MaxValue, 0, 4, 0, 4));
 
                         if (_setting.EnableHeartbeat)
                         {

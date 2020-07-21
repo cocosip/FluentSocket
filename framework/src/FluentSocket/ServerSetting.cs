@@ -10,7 +10,7 @@ namespace FluentSocket
 
         /// <summary>'MessageReqPacket' channel capacity
         /// </summary>
-        public int MessageReqCapacity { get; set; } = 5000;
+        public int MessageReqCapacity { get; set; } = 20000;
 
         /// <summary>Thread count of handle 'MessageReqPacket'
         /// </summary>

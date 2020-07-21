@@ -16,7 +16,7 @@ namespace FluentSocket.DotNetty.Handlers
         protected override void ChannelRead0(IChannelHandlerContext ctx, PongPacket msg)
         {
             _logger.LogDebug("Receive Pong-[{0}]", msg.PongCode);
-            //ReferenceCountUtil.SafeRelease(msg);
+            ReferenceCountUtil.SafeRelease(msg);
         }
 
 

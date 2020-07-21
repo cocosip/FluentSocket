@@ -1,4 +1,5 @@
-﻿using DotNetty.Handlers.Logging;
+﻿using DotNetty.Codecs;
+using DotNetty.Handlers.Logging;
 using DotNetty.Transport.Bootstrapping;
 using DotNetty.Transport.Channels;
 using DotNetty.Transport.Channels.Sockets;
@@ -106,6 +107,9 @@ namespace FluentSocket.DotNetty
                         //{
                         //    pipeline.AddLast("tls", TlsHandler.Server(_setting.TlsCertificate));
                         //}
+
+                        pipeline.AddLast("framing-enc", new LengthFieldPrepender(4));
+                        pipeline.AddLast("framing-dec", new LengthFieldBasedFrameDecoder(int.MaxValue, 0, 4, 0, 4));
 
                         //coder and encoder
                         pipeline.AddLast(new PacketDecoder(), new PacketEncoder());
@@ -307,20 +311,26 @@ namespace FluentSocket.DotNetty
             };
 
             var response = await requestMessageHandler.HandleRequestAsync(wrapper.Session, request);
+            
+            if (!_channelDict.TryGetValue(wrapper.Session.SessionId, out IChannel channel))
+            {
+                _logger.LogError("Can't find any channel by session {0}", wrapper?.Session.SessionId);
+                return;
+            }
 
-            var respMessagePacket = new MessageRespPacket()
+            var messageRespPacket = new MessageRespPacket()
             {
                 Sequence = wrapper.Packet.Sequence,
                 Code = response.Code,
                 Body = response.Body
             };
 
-            if (!_channelDict.TryGetValue(wrapper.Session.SessionId, out IChannel channel))
+            if (!channel.IsWritable)
             {
-                _logger.LogError("Can't find any channel by session {0}", wrapper?.Session.SessionId);
+                _logger.LogInformation("Channel not writeable!");
             }
 
-            await channel.WriteAndFlushAsync(respMessagePacket);
+            await channel.WriteAndFlushAsync(messageRespPacket);
         }
 
         /// <summary>Write 'MessageReqPacket' to channel
@@ -371,10 +381,8 @@ namespace FluentSocket.DotNetty
         /// </summary>
         private void ActiveInActiveHandler(IChannel channel, bool active)
         {
-
             if (active)
             {
-
                 if (!_channelDict.ContainsKey(channel.Id.AsLongText()))
                 {
                     _channelDict.GetOrAdd(channel.Id.AsLongText(), channel);

@@ -25,7 +25,7 @@ namespace FluentSocket.Samples.Message.DotNetty.ServerHost
             var responseMessage = new ResponseMessage()
             {
                 Code = request.Code,
-                Body = Encoding.UTF8.GetBytes("Hello client!")
+                Body = Encoding.UTF8.GetBytes($"Hello client!{DateTime.Now.ToString("yyyy-MM-dd hh:mm:ss fff")}")
             };
 
             var timeRequestMessage = _binarySerializer.Deserialize<TimeRequestMessage>(request.Body);

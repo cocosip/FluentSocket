@@ -49,7 +49,8 @@ namespace FluentSocket.Samples.Message.DotNetty.ServerHost
             var setting = new ServerSetting()
             {
                 ListeningEndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 21000),
-                HandleMessageReqThread = 1
+                HandleMessageReqThread = 3,
+                MessageReqCapacity = 100000,
             };
             _socketServer = socketFactory.CreateServer(setting);
 

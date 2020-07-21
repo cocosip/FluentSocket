@@ -6,13 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\FluentSocket.TestCommon\FluentSocket.TestCommon.csproj" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="3.1.6" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="log4net.config">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    <ProjectReference Include="..\FluentSocket.Samples.Common\FluentSocket.Samples.Common.csproj" />
   </ItemGroup>
 
 </Project>

@@ -8,6 +8,7 @@ namespace FluentSocket
         public static IServiceCollection AddFluentSocket(this IServiceCollection services)
         {
             services
+                .AddSingleton<IFluentSocketApplication, FluentSocketApplication>()
                 .AddSingleton<IFluentSocketFactory, DefaultFluentSocketFactory>()
                 .AddSingleton<ISocketSessionBuilder, DefaultSocketSessionBuilder>()
                 .AddTransient<ISocketSessionFactory, DefaultSocketSessionFactory>()

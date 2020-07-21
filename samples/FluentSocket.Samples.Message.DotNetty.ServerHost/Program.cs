@@ -1,24 +1,21 @@
-﻿using FluentSocket.TestCommon;
-using FluentSocket.TestCommon.Log4Net;
-using FluentSocket.TestCommon.Performance;
+﻿using FluentSocket.DotNetty;
+using FluentSocket.Samples.Common;
+using FluentSocket.Samples.Common.Performance;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Net;
 
-namespace FluentSocket.TestServer
+namespace FluentSocket.Samples.Message.DotNetty.ServerHost
 {
     class Program
     {
-
-        static string _performanceKey = "ReceiveMessage";
-        static SocketServer _server;
+        static string _performanceKey = "Async";
         static ILogger _logger;
         static IPerformanceService _performanceService;
-
+        static ISocketServer _socketServer;
         static void Main(string[] args)
         {
-
             InitializeFluentSocket();
             ServerRun();
             Console.ReadLine();
@@ -27,37 +24,37 @@ namespace FluentSocket.TestServer
         public static async void ServerRun()
         {
             _performanceService.Start();
-            await _server.RunAsync();
+            await _socketServer.RunAsync();
         }
 
         static void InitializeFluentSocket()
         {
             IServiceCollection services = new ServiceCollection();
             services
-                .AddLogging(f => f.AddLog4Net())
+                .AddLogging(l =>
+                {
+                    l.SetMinimumLevel(LogLevel.Debug);
+                    l.AddConsole();
+                })
+                .AddSerialize()
                 .AddPerformance()
-                .AddFluentSocket();
-            var provider = services.BuildServiceProvider();
-            var socketFactory = provider.GetService<IFluentSocketFactory>();
+                .AddFluentSocket()
+                .AddFluentSocketDotNetty()
+                ;
+            var serviceProvider = services.BuildServiceProvider();
+            var socketFactory = serviceProvider.GetService<IFluentSocketFactory>();
 
 
             //客户端
             var setting = new ServerSetting()
             {
-                WriteBufferLowWaterMark = 1024 * 1024 * 1,
-                WriteBufferHighWaterMark = 1024 * 1024 * 4,
-                SoRcvbuf = 1024 * 1024 * 2,
-                SoSndbuf = 1024 * 1024 * 2,
-                IsSsl = false,
-                UseLibuv = false,
                 ListeningEndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 21000),
-                BossGroupEventLoopCount = 2,
-                WorkGroupEventLoopCount = 4,
+                HandleMessageReqThread = 1
             };
-            _server = socketFactory.CreateServer(setting);
+            _socketServer = socketFactory.CreateServer(setting);
 
-            _logger = provider.GetService<ILogger<SocketServer>>();
-            _performanceService = provider.GetService<IPerformanceService>();
+            _logger = serviceProvider.GetService<ILogger<ISocketServer>>();
+            _performanceService = serviceProvider.GetService<IPerformanceService>();
             var performanceServiceSetting = new PerformanceServiceSetting
             {
                 AutoLogging = false,
@@ -69,8 +66,8 @@ namespace FluentSocket.TestServer
             };
             _performanceService.Initialize(_performanceKey, performanceServiceSetting);
 
-            _server.RegisterRequestMessageHandler(100, new SeverRequestMessageHandler(_performanceService));
+            var handler = serviceProvider.CreateInstance<ServerRequestMessageHandler>();
+            _socketServer.RegisterRequestHandler(100, handler);
         }
-
     }
 }

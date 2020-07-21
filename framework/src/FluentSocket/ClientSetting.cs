@@ -31,5 +31,14 @@ namespace FluentSocket
         /// <summary>Send heartbeat interval (default is 30s)
         /// </summary>
         public int HeartbeatInterval { get; set; } = 30;
+
+        /// <summary>'PushReqPacket' channel capacity
+        /// </summary>
+        public int PushReqCapacity { get; set; } = 5000;
+
+        /// <summary>Thread count of handle 'PushReqPacket'
+        /// </summary>
+        public int HandlePushReqThread { get; set; } = 1;
+
     }
 }

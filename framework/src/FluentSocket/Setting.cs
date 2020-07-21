@@ -10,10 +10,6 @@ namespace FluentSocket
         /// </summary>
         public int ScanTimeoutRequestInterval { get; set; } = 1000;
 
-        /// <summary>When received 'MessageReqPacket', it will write to the channel.
-        /// </summary>
-        public int ReqPacketChannelCapacity { get; set; } = 10000;
-
         /// <summary>Send message flowControl threshold
         /// </summary>
         public int SendMessageFlowControlThreshold { get; set; } = 500;

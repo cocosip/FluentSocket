@@ -12,10 +12,6 @@ namespace FluentSocket.DotNetty
         /// </summary>
         public X509Certificate2 TlsCertificate { get; set; }
 
-        /// <summary>Thread count when handle the 'ReqMessagePacket'
-        /// </summary>
-        public int HandleReqThreadCount { get; set; } = 1;
-
         /// <summary>Write buffer high water 2M
         /// </summary>
         public int WriteBufferHighWaterMark { get; set; } = 1024 * 1024 * 2;

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace FluentSocket.TestCommon.Performance
+namespace FluentSocket.Samples.Common.Performance
 {
     public interface IPerformanceService
     {

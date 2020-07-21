@@ -34,7 +34,7 @@ namespace FluentSocket.DotNetty
         public bool IsConnected => _isConnected;
 
         private readonly ILogger _logger;
-        private readonly IServiceProvider _serviceProvider;
+        private readonly IFluentSocketApplication _app;
         private readonly ISocketSessionBuilder _socketSessionBuilder;
         private readonly ClientSetting _setting;
 
@@ -55,10 +55,10 @@ namespace FluentSocket.DotNetty
         private readonly ConcurrentDictionary<short, IPushMessageHandler> _pushMessageHandlerDict;
         private readonly ConcurrentDictionary<int, ResponseFuture> _responseFutureDict;
 
-        public DotNettySocketClient(ILogger<DotNettySocketClient> logger, IServiceProvider serviceProvider, ISocketSessionBuilder socketSessionBuilder, ClientSetting setting)
+        public DotNettySocketClient(ILogger<DotNettySocketClient> logger, IFluentSocketApplication app, ISocketSessionBuilder socketSessionBuilder, ClientSetting setting)
         {
             _logger = logger;
-            _serviceProvider = serviceProvider;
+            _app = app;
             _socketSessionBuilder = socketSessionBuilder;
 
             _setting = setting;
@@ -72,7 +72,7 @@ namespace FluentSocket.DotNetty
 
             _semaphoreSlim = new SemaphoreSlim(1);
             _manualResetEventSlim = new ManualResetEventSlim(false);
-            _reqPushChannel = Channel.CreateBounded<PushReqPacket>(_setting.ReqPacketChannelCapacity);
+            _reqPushChannel = Channel.CreateBounded<PushReqPacket>(_setting.PushReqCapacity);
             _pushMessageHandlerDict = new ConcurrentDictionary<short, IPushMessageHandler>();
             _responseFutureDict = new ConcurrentDictionary<int, ResponseFuture>();
         }
@@ -123,26 +123,24 @@ namespace FluentSocket.DotNetty
 
                         if (_setting.EnableHeartbeat)
                         {
-                            pipeline.AddLast("HeartbeatHandler", _serviceProvider.CreateInstance<HeartbeatHandler>());
+                            pipeline.AddLast("HeartbeatHandler", _app.ServiceProvider.CreateInstance<HeartbeatHandler>());
                         }
 
                         //Handle PongPacket
-                        pipeline.AddLast("PongPacketHandler", _serviceProvider.CreateInstance<PongPacketHandler>());
+                        pipeline.AddLast("PongPacketHandler", _app.ServiceProvider.CreateInstance<PongPacketHandler>());
 
-
-                        //AddPushMessageHandler(pipeline);
 
                         if (_setting.EnableReConnect)
                         {
                             //Reconnect to server
-                            pipeline.AddLast("ReConnectHandler", _serviceProvider.CreateInstance<ReConnectHandler>(_setting, new Func<Task>(DoReConnectAsync)));
+                            pipeline.AddLast("ReConnectHandler", _app.ServiceProvider.CreateInstance<ReConnectHandler>(_setting, new Func<Task>(DoReConnectAsync)));
                         }
 
                         //Socket client
                         Func<PushReqPacket, ValueTask> writePushReqPacketHandler = WritePushReqPacketAsync;
                         Action<MessageRespPacket> setMessageRespPacketHandler = SetMessageRespPacket;
                         Action<bool> channelWritabilityChangedHandler = ChannelWritabilityChanged;
-                        pipeline.AddLast("SocketClientHandler", _serviceProvider.CreateInstance<SocketClientHandler>(writePushReqPacketHandler, setMessageRespPacketHandler, channelWritabilityChangedHandler));
+                        pipeline.AddLast("SocketClientHandler", _app.ServiceProvider.CreateInstance<SocketClientHandler>(writePushReqPacketHandler, setMessageRespPacketHandler, channelWritabilityChangedHandler));
 
                     }));
 
@@ -187,6 +185,7 @@ namespace FluentSocket.DotNetty
             var sequence = Interlocked.Increment(ref _sequence);
             var messageReqPacket = new MessageReqPacket()
             {
+                Sequence = sequence,
                 Code = request.Code,
                 Body = request.Body,
             };
@@ -248,7 +247,7 @@ namespace FluentSocket.DotNetty
                 _session = _socketSessionBuilder.BuildSession(_clientChannel.Id.AsLongText(), _clientChannel.RemoteAddress, _clientChannel.LocalAddress, SocketSessionState.Connected);
             }
 
-            _logger.LogInformation($"Client DoConnect! ServerEndPoint:{_setting.ServerEndPoint.ToStringAddress()},LocalEndPoint:{_setting.LocalEndPoint.ToStringAddress()}");
+            _logger.LogInformation($"Client DoConnect! ServerEndPoint:{_setting.ServerEndPoint.ToStringAddress()},LocalEndPoint:{_setting.LocalEndPoint?.ToStringAddress()}");
         }
 
         /// <summary>Do reconnect
@@ -311,7 +310,7 @@ namespace FluentSocket.DotNetty
         {
             Task.Factory.StartNew(async () =>
             {
-                while (_cts.Token.IsCancellationRequested)
+                while (!_cts.Token.IsCancellationRequested)
                 {
                     try
                     {
@@ -352,7 +351,7 @@ namespace FluentSocket.DotNetty
         /// </summary>
         private void StartHandlePushReqPacketTask()
         {
-            for (int i = 0; i < _extraSetting.HandleReqThreadCount; i++)
+            for (int i = 0; i < _setting.HandlePushReqThread; i++)
             {
                 Task.Factory.StartNew(async () =>
                 {
@@ -434,6 +433,10 @@ namespace FluentSocket.DotNetty
                 {
                     _logger.LogDebug("Set remoting response failed,Sequence: '{0}'.", packet.Sequence);
                 }
+            }
+            else
+            {
+                _logger.LogDebug("Try remove  from responseFuture dict fail!");
             }
         }
 

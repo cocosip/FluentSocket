@@ -29,6 +29,19 @@ namespace FluentSocket
                     injectSetting.ExtraSettings.AddRange(setting.ExtraSettings);
                 }
 
+
+                injectSetting.ScanTimeoutRequestInterval = setting.ScanTimeoutRequestInterval;
+                injectSetting.SendMessageFlowControlThreshold = setting.SendMessageFlowControlThreshold;
+                injectSetting.QuietPeriodMilliSeconds = setting.QuietPeriodMilliSeconds;
+                injectSetting.CloseTimeoutSeconds = setting.CloseTimeoutSeconds;
+
+                injectSetting.ListeningEndPoint = setting.ListeningEndPoint;
+                injectSetting.MessageReqCapacity = setting.MessageReqCapacity;
+                injectSetting.HandleMessageReqThread = setting.HandleMessageReqThread;
+
+                //var injectServiceProvider = _serviceProvider.GetService<IServiceProvider>();
+
+
                 var socketServer = scope.ServiceProvider.GetRequiredService<ISocketServer>();
                 return socketServer;
             }
@@ -54,6 +67,21 @@ namespace FluentSocket
                 {
                     injectSetting.ExtraSettings.AddRange(setting.ExtraSettings);
                 }
+
+                injectSetting.ScanTimeoutRequestInterval = setting.ScanTimeoutRequestInterval;
+                injectSetting.SendMessageFlowControlThreshold = setting.SendMessageFlowControlThreshold;
+                injectSetting.QuietPeriodMilliSeconds = setting.QuietPeriodMilliSeconds;
+                injectSetting.CloseTimeoutSeconds = setting.CloseTimeoutSeconds;
+
+                injectSetting.ServerEndPoint = setting.ServerEndPoint;
+                injectSetting.LocalEndPoint = setting.LocalEndPoint;
+                injectSetting.EnableReConnect = setting.EnableReConnect;
+                injectSetting.ReConnectDelaySeconds = setting.ReConnectDelaySeconds;
+                injectSetting.ReConnectMaxCount = setting.ReConnectMaxCount;
+                injectSetting.EnableHeartbeat = setting.EnableHeartbeat;
+                injectSetting.HeartbeatInterval = setting.HeartbeatInterval;
+                injectSetting.PushReqCapacity = setting.PushReqCapacity;
+                injectSetting.HandlePushReqThread = setting.HandlePushReqThread;
 
                 var socketClient = scope.ServiceProvider.GetRequiredService<ISocketClient>();
                 return socketClient;

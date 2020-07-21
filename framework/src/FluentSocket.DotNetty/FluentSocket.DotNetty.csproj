@@ -3,7 +3,7 @@
   <Import Project="..\..\..\build\common.props" />
   
   <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
+    <TargetFrameworks>netstandard2.0;netstandard2.1</TargetFrameworks>
     <AssemblyName>FluentSocket.DotNetty</AssemblyName>
     <PackageId>FluentSocket.DotNetty</PackageId>
     <RootNamespace>FluentSocket</RootNamespace>

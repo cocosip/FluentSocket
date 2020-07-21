@@ -21,7 +21,7 @@ namespace FluentSocket.DotNetty.Handlers
             }
             var lengthBuffer = buffer.Slice(5, 4);
             // is that right?
-            var length = lengthBuffer.GetInt(5);
+            var length = lengthBuffer.ReadInt();
 
             // buffer is smaller than packet length
             if (buffer.ReadableBytes < 9 + length)

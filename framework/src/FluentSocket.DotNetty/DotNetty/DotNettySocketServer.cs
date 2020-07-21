@@ -30,7 +30,7 @@ namespace FluentSocket.DotNetty
         public bool IsRunning => _isRunning;
 
         private readonly ILogger _logger;
-        private readonly IServiceProvider _serviceProvider;
+        private readonly IFluentSocketApplication _app;
         private readonly ServerSetting _setting;
         private readonly DotNettyServerSetting _extraSetting;
 
@@ -49,23 +49,23 @@ namespace FluentSocket.DotNetty
         private readonly ConcurrentDictionary<short, IRequestMessageHandler> _requestMessageHandlerDict;
         private readonly ConcurrentDictionary<int, PushFuture> _pushFutureDict;
         private readonly ConcurrentDictionary<string, IChannel> _channelDict;
-        public DotNettySocketServer(ILogger<DotNettySocketServer> logger, IServiceProvider serviceProvider, ISocketSessionBuilder socketSessionBuilder, ServerSetting setting)
+        public DotNettySocketServer(ILogger<DotNettySocketServer> logger, IFluentSocketApplication app, ISocketSessionBuilder socketSessionBuilder, ServerSetting setting)
         {
             _logger = logger;
-            _serviceProvider = serviceProvider;
+            _app = app;
 
             _setting = setting;
             if (!_setting.ExtraSettings.Any())
             {
-                _setting.ExtraSettings.Add(new DotNettyClientSetting());
+                _setting.ExtraSettings.Add(new DotNettyServerSetting());
             }
             _extraSetting = (DotNettyServerSetting)_setting.ExtraSettings.FirstOrDefault();
 
             _socketSessionBuilder = socketSessionBuilder;
-            _sessionFactory = _serviceProvider.GetService<ISocketSessionFactory>();
+            _sessionFactory = app.ServiceProvider.GetService<ISocketSessionFactory>();
 
             _cts = new CancellationTokenSource();
-            _messageReqChannel = Channel.CreateBounded<MessageReqPacketWrapper>(_setting.ReqPacketChannelCapacity);
+            _messageReqChannel = Channel.CreateBounded<MessageReqPacketWrapper>(_setting.MessageReqCapacity);
 
             _requestMessageHandlerDict = new ConcurrentDictionary<short, IRequestMessageHandler>();
             _pushFutureDict = new ConcurrentDictionary<int, PushFuture>();
@@ -111,14 +111,14 @@ namespace FluentSocket.DotNetty
                         pipeline.AddLast(new PacketDecoder(), new PacketEncoder());
 
                         //Handle PingPacket
-                        pipeline.AddLast("PingPacketHandler", _serviceProvider.CreateInstance<PingPacketHandler>());
+                        pipeline.AddLast("PingPacketHandler", _app.ServiceProvider.CreateInstance<PingPacketHandler>());
 
                         //SocketServer handler
                         Func<string, MessageReqPacket, ValueTask> writeMessageReqPacketHandler = WriteMessageReqPacketAsync;
                         Action<PushRespPacket> setPushRespPacketHandler = SetPushRespPacket;
                         Action<IChannel, bool> channelActiveInActiveHandler = ActiveInActiveHandler;
 
-                        pipeline.AddLast("SocketServerHandler", _serviceProvider.CreateInstance<SocketServerHandler>(writeMessageReqPacketHandler, setPushRespPacketHandler, channelActiveInActiveHandler));
+                        pipeline.AddLast("SocketServerHandler", _app.ServiceProvider.CreateInstance<SocketServerHandler>(writeMessageReqPacketHandler, setPushRespPacketHandler, channelActiveInActiveHandler));
 
                     }));
 
@@ -157,6 +157,7 @@ namespace FluentSocket.DotNetty
             var sequence = Interlocked.Increment(ref _sequence);
             var pushReqPacket = new PushReqPacket()
             {
+                Sequence = sequence,
                 PushType = PushType.Reply,
                 Code = request.Code,
                 Body = request.Body,
@@ -223,7 +224,7 @@ namespace FluentSocket.DotNetty
         {
             Task.Factory.StartNew(async () =>
             {
-                while (_cts.Token.IsCancellationRequested)
+                while (!_cts.Token.IsCancellationRequested)
                 {
                     try
                     {
@@ -263,11 +264,11 @@ namespace FluentSocket.DotNetty
 
         private void StartHandleMessageReqPacketTask()
         {
-            for (int i = 0; i < _extraSetting.HandleReqThreadCount; i++)
+            for (int i = 0; i < _setting.HandleMessageReqThread; i++)
             {
                 Task.Factory.StartNew(async () =>
                 {
-                    while (_cts.Token.IsCancellationRequested)
+                    while (!_cts.Token.IsCancellationRequested)
                     {
                         try
                         {
@@ -314,7 +315,12 @@ namespace FluentSocket.DotNetty
                 Body = response.Body
             };
 
-            //await _clientChannel.WriteAndFlushAsync(respMessagePacket);
+            if (!_channelDict.TryGetValue(wrapper.Session.SessionId, out IChannel channel))
+            {
+                _logger.LogError("Can't find any channel by session {0}", wrapper?.Session.SessionId);
+            }
+
+            await channel.WriteAndFlushAsync(respMessagePacket);
         }
 
         /// <summary>Write 'MessageReqPacket' to channel

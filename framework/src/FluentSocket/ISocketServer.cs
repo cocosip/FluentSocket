@@ -23,7 +23,7 @@ namespace FluentSocket
 
         /// <summary>Push message async
         /// </summary>
-        ValueTask<ResponsePush> PushAsync(RequestPush request, ISocketSession session, int timeoutMillis = 5000);
+        ValueTask<ResponsePush> PushAsync(RequestPush request, string sessionId, int timeoutMillis = 5000);
 
         /// <summary>Server close
         /// </summary>

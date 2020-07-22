@@ -122,7 +122,7 @@ namespace FluentSocket.Samples.Common.Services
                         {
                             Code = 101,
                             Body = _binarySerializer.Serialize(message)
-                        }, _socketSession);
+                        }, _socketSession.SessionId);
 
                         _performanceService.IncrementKeyCount(_performanceKey, (DateTime.Now - message.CreateTime).TotalMilliseconds);
                         Interlocked.Increment(ref _sendCount);

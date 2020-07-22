@@ -148,7 +148,7 @@ namespace FluentSocket.DotNetty
 
         /// <summary>Push message async
         /// </summary>
-        public async ValueTask<ResponsePush> PushAsync(RequestPush request, ISocketSession session, int timeoutMillis = 5000)
+        public async ValueTask<ResponsePush> PushAsync(RequestPush request, string sessionId, int timeoutMillis = 5000)
         {
             if (_boundChannel == null)
             {
@@ -156,9 +156,9 @@ namespace FluentSocket.DotNetty
             }
 
             //Get channel from dict
-            if (!_channelDict.TryGetValue(session.SessionId, out IChannel channel))
+            if (!_channelDict.TryGetValue(sessionId, out IChannel channel))
             {
-                throw new ArgumentNullException("Can't find channel by session id {0}.", session.SessionId);
+                throw new ArgumentNullException("Can't find channel by session id {0}.", sessionId);
             }
 
             var sequence = Interlocked.Increment(ref _sequence);

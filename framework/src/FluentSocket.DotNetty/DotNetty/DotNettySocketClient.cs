@@ -146,15 +146,6 @@ namespace FluentSocket.DotNetty
 
                     }));
 
-                if (_setting.LocalEndPoint == null)
-                {
-                    _clientChannel = await _bootStrap.ConnectAsync(_setting.ServerEndPoint);
-                }
-                else
-                {
-                    _clientChannel = await _bootStrap.ConnectAsync(_setting.ServerEndPoint, _setting.LocalEndPoint);
-                }
-
                 await DoConnectAsync();
 
                 _isConnected = true;
@@ -166,7 +157,7 @@ namespace FluentSocket.DotNetty
             {
                 _logger.LogError(ex.Message);
 
-                await _group.ShutdownGracefullyAsync(TimeSpan.FromMilliseconds(_setting.QuietPeriodMilliSeconds), TimeSpan.FromSeconds(_setting.CloseTimeoutSeconds));
+                await _group?.ShutdownGracefullyAsync(TimeSpan.FromMilliseconds(_setting.QuietPeriodMilliSeconds), TimeSpan.FromSeconds(_setting.CloseTimeoutSeconds));
             }
 
         }
@@ -218,10 +209,6 @@ namespace FluentSocket.DotNetty
             finally
             {
                 await _group?.ShutdownGracefullyAsync(TimeSpan.FromMilliseconds(_setting.QuietPeriodMilliSeconds), TimeSpan.FromSeconds(_setting.CloseTimeoutSeconds));
-
-                _clientChannel = null;
-                _group = null;
-                _bootStrap = null;
             }
         }
 

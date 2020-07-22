@@ -48,6 +48,8 @@ namespace FluentSocket.DotNetty
         private readonly CancellationTokenSource _cts;
         private readonly Channel<MessageReqPacketWrapper> _messageReqChannel;
         private readonly ConcurrentDictionary<short, IRequestMessageHandler> _requestMessageHandlerDict;
+        private readonly ConcurrentDictionary<Type, ISocketService> _services;
+
         private readonly ConcurrentDictionary<int, PushFuture> _pushFutureDict;
         private readonly ConcurrentDictionary<string, IChannel> _channelDict;
         public DotNettySocketServer(ILogger<DotNettySocketServer> logger, IFluentSocketApplication app, ISocketSessionBuilder socketSessionBuilder, ServerSetting setting)
@@ -69,6 +71,7 @@ namespace FluentSocket.DotNetty
             _messageReqChannel = Channel.CreateBounded<MessageReqPacketWrapper>(_setting.MessageReqCapacity);
 
             _requestMessageHandlerDict = new ConcurrentDictionary<short, IRequestMessageHandler>();
+            _services = new ConcurrentDictionary<Type, ISocketService>();
             _pushFutureDict = new ConcurrentDictionary<int, PushFuture>();
             _channelDict = new ConcurrentDictionary<string, IChannel>();
         }
@@ -129,14 +132,14 @@ namespace FluentSocket.DotNetty
                 _boundChannel = await bootstrap.BindAsync(_setting.ListeningEndPoint);
                 _isRunning = true;
 
-                _logger.LogInformation($"Server Run! ListeningEndPoint:{_setting.ListeningEndPoint}, boundChannel:{_boundChannel.Id.AsShortText()}");
+                _logger.LogInformation($"Socket server run! ListeningEndPoint:{_setting.ListeningEndPoint}, ChannelId:{_boundChannel.Id.AsLongText()}");
 
                 StartScanTimeoutRequestTask();
                 StartHandleMessageReqPacketTask();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Server run failed,ex:{0}.", ex.Message);
+                _logger.LogError(ex, "Socket server run fail,ex:{0}.", ex.Message);
                 await Task.WhenAll(
                     _bossGroup.ShutdownGracefullyAsync(TimeSpan.FromMilliseconds(_setting.QuietPeriodMilliSeconds), TimeSpan.FromSeconds(_setting.CloseTimeoutSeconds)),
                     _workerGroup.ShutdownGracefullyAsync(TimeSpan.FromMilliseconds(_setting.QuietPeriodMilliSeconds), TimeSpan.FromSeconds(_setting.CloseTimeoutSeconds)));
@@ -149,13 +152,13 @@ namespace FluentSocket.DotNetty
         {
             if (_boundChannel == null)
             {
-                throw new ArgumentNullException("Server should run first!");
+                throw new ArgumentNullException("Socket server should run first!");
             }
 
             //Get channel from dict
             if (!_channelDict.TryGetValue(session.SessionId, out IChannel channel))
             {
-                throw new ArgumentNullException("Can't find session '{0}' channel.", session.SessionId);
+                throw new ArgumentNullException("Can't find channel by session id {0}.", session.SessionId);
             }
 
             var sequence = Interlocked.Increment(ref _sequence);
@@ -192,7 +195,7 @@ namespace FluentSocket.DotNetty
             }
             finally
             {
-                _logger.LogInformation("Server close!");
+                _logger.LogInformation("Socket server close!");
                 await Task.WhenAll(
                     _bossGroup.ShutdownGracefullyAsync(TimeSpan.FromMilliseconds(_setting.QuietPeriodMilliSeconds), TimeSpan.FromSeconds(_setting.CloseTimeoutSeconds)),
                     _workerGroup.ShutdownGracefullyAsync(TimeSpan.FromMilliseconds(_setting.QuietPeriodMilliSeconds), TimeSpan.FromSeconds(_setting.CloseTimeoutSeconds)));
@@ -212,6 +215,17 @@ namespace FluentSocket.DotNetty
                 _logger.LogInformation("Register RequestMessageHandler fail! Code {0}", code);
             }
         }
+
+        /// <summary>Register SessionService
+        /// </summary>
+        public void RegisterSessionService(ISessionService sessionService)
+        {
+            if (!_services.TryAdd(typeof(ISessionService), sessionService))
+            {
+                _logger.LogWarning("Add session service fail!");
+            }
+        }
+
 
         /// <summary>Get sessions
         /// </summary>
@@ -311,7 +325,7 @@ namespace FluentSocket.DotNetty
             };
 
             var response = await requestMessageHandler.HandleRequestAsync(wrapper.Session, request);
-            
+
             if (!_channelDict.TryGetValue(wrapper.Session.SessionId, out IChannel channel))
             {
                 _logger.LogError("Can't find any channel by session {0}", wrapper?.Session.SessionId);
@@ -389,6 +403,12 @@ namespace FluentSocket.DotNetty
 
                     var session = _socketSessionBuilder.BuildSession(channel.Id.AsLongText(), channel.RemoteAddress, channel.LocalAddress, SocketSessionState.Connected);
                     _sessionFactory.AddOrUpdateSession(session);
+
+                    if (_services.TryGetValue(typeof(ISessionService), out ISocketService socketService))
+                    {
+                        var sessionService = (ISessionService)socketService;
+                        sessionService.OnSessionConnectedAsync(session);
+                    }
                 }
             }
             else
@@ -397,7 +417,12 @@ namespace FluentSocket.DotNetty
                 {
                     _logger.LogDebug("Remove channel from dict fail! channel id '{0}'", channel.Id.AsLongText());
                 }
-                _sessionFactory.RemoveSession(channel.Id.AsLongText());
+                var session = _sessionFactory.RemoveSession(channel.Id.AsLongText());
+                if (_services.TryGetValue(typeof(ISessionService), out ISocketService socketService))
+                {
+                    var sessionService = (ISessionService)socketService;
+                    sessionService.OnSessionClosedAsync(session);
+                }
             }
         }
 

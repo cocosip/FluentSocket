@@ -33,6 +33,10 @@ namespace FluentSocket
         /// </summary>
         void RegisterRequestHandler(short code, IRequestMessageHandler handler);
 
+        /// <summary>Register SessionService
+        /// </summary>
+        void RegisterSessionService(ISessionService sessionService);
+
         /// <summary>Get sessions
         /// </summary>
         List<ISocketSession> GetSessions(Func<ISocketSession, bool> predicate = null);

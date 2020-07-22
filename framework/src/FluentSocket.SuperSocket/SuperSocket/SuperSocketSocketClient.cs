@@ -1,18 +1,16 @@
 ﻿using FluentSocket.Protocols;
 using FluentSocket.Traffic;
+using FluentSocket.Utils;
 using Microsoft.Extensions.Logging;
-using SuperSocket.Channel;
 using SuperSocket.Client;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using SystemChannels = System.Threading.Channels;
 using SystemChannel = System.Threading.Channels.Channel;
+using SystemChannels = System.Threading.Channels;
 
 namespace FluentSocket.SuperSocket
 {
@@ -38,8 +36,8 @@ namespace FluentSocket.SuperSocket
         private IEasyClient<Packet> _easyClient = null;
 
         private bool _isConnected = false;
-        private int _reConnectAttempt = 0;
-        private int _sequence = 1;
+        //private int _reConnectAttempt = 0;
+        //private int _sequence = 1;
 
 
 
@@ -72,27 +70,27 @@ namespace FluentSocket.SuperSocket
             _responseFutureDict = new ConcurrentDictionary<int, ResponseFuture>();
         }
 
+        /// <summary>Connect to server
+        /// </summary>
         public async ValueTask ConnectAsync()
         {
             if (_isConnected)
             {
-                _logger.LogWarning("Client is connected , don't connect again !");
+                _logger.LogWarning("Socket client is connected , don't connect again !");
                 return;
             }
-            _easyClient = new EasyClient<Packet>(new PacketFilter(9), new ChannelOptions()
+            try
             {
+                _easyClient = new EasyClient<Packet>(new PacketFilter(9));
+                await _easyClient.ConnectAsync(_setting.ServerEndPoint);
 
-            });
-            
-            //try
-            //{
-            //    //await _easyClient.ConnectAsync(EndPoint )
-            //}
-            //catch (Exception ex)
-            //{
-
-            //}
-
+                _isConnected = true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Socket client to server '{0}' fail!", _setting.ServerEndPoint.ToStringAddress());
+                _isConnected = false;
+            }
         }
 
 

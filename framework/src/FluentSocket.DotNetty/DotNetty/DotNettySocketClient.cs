@@ -83,7 +83,7 @@ namespace FluentSocket.DotNetty
         {
             if (_isConnected)
             {
-                _logger.LogWarning("Client is connected , don't connect again !");
+                _logger.LogWarning("Socket client is connected , don't connect again !");
                 return;
             }
 
@@ -177,7 +177,7 @@ namespace FluentSocket.DotNetty
         {
             if (_clientChannel == null)
             {
-                throw new ArgumentNullException("Client should connect first!");
+                throw new ArgumentNullException("Socket client should connect first!");
             }
             if (!_clientChannel.IsWritable)
             {
@@ -241,32 +241,31 @@ namespace FluentSocket.DotNetty
         /// </summary>
         private async ValueTask DoConnectAsync()
         {
-            if (_clientChannel.Active)
-            {
-                _logger.LogInformation("Channel '{0}' is active,will not do connect!", _clientChannel?.Id.AsLongText());
-                return;
-            }
-
             _clientChannel = _setting.LocalEndPoint == null ? await _bootStrap.ConnectAsync(_setting.ServerEndPoint) : await _bootStrap.ConnectAsync(_setting.ServerEndPoint, _setting.LocalEndPoint);
 
+            _logger.LogInformation("Socket client connect to server:{0}.", _setting.ServerEndPoint.ToStringAddress());
 
-            _logger.LogInformation($"Client DoConnect! ServerEndPoint:{_setting.ServerEndPoint.ToStringAddress()},LocalEndPoint:{_setting.LocalEndPoint?.ToStringAddress()}");
+            if (_setting.LocalEndPoint != null)
+            {
+                _logger.LogInformation("Socket client bind local:{0}.", _setting.LocalEndPoint.ToStringAddress());
+            }
         }
+
 
         /// <summary>Do reconnect
         /// </summary>
         private async Task DoReConnectAsync()
         {
-            //If active close,it will not reconnect!
             if (!_isConnected)
             {
-                _logger.LogDebug("Current channel is close,it will not reconnect! channel id:{0}", _clientChannel?.Id.AsShortText());
+                _logger.LogDebug("Socket client is close, it will not reconnect! ChannelId:{0}", _clientChannel?.Id.AsShortText());
                 return;
             }
+
             //Current channel is active
             if (_clientChannel.Active)
             {
-                _logger.LogDebug("Current channel is active,it will not reconnect! channel id:{0}", _clientChannel?.Id.AsShortText());
+                _logger.LogDebug("Socket client channel is active,it will not reconnect! ChannelId:{0}", _clientChannel?.Id.AsShortText());
                 return;
             }
 
@@ -281,7 +280,7 @@ namespace FluentSocket.DotNetty
                 bool reConnectSuccess = false;
                 try
                 {
-                    _logger.LogInformation($"Try to reconnect server!");
+                    _logger.LogInformation("Try to reconnect server {0} !", _setting.ServerEndPoint.ToStringAddress());
                     await DoConnectAsync();
                     Interlocked.Exchange(ref _reConnectAttempt, 0);
                     reConnectSuccess = true;
@@ -358,7 +357,7 @@ namespace FluentSocket.DotNetty
             {
                 Task.Factory.StartNew(async () =>
                 {
-                    while (_cts.Token.IsCancellationRequested)
+                    while (!_cts.Token.IsCancellationRequested)
                     {
                         try
                         {
@@ -379,21 +378,21 @@ namespace FluentSocket.DotNetty
         /// </summary>
         private async ValueTask HandleReqPushPacketAsync()
         {
-            var reqPushPacket = await _reqPushChannel.Reader.ReadAsync(_cts.Token);
-            if (!_pushMessageHandlerDict.TryGetValue(reqPushPacket.Code, out IPushMessageHandler handler))
+            var pushReqPacket = await _reqPushChannel.Reader.ReadAsync(_cts.Token);
+            if (!_pushMessageHandlerDict.TryGetValue(pushReqPacket.Code, out IPushMessageHandler handler))
             {
-                _logger.LogWarning("Can't find any 'IPushMessageHandler' from the dict by code '{0}'! ", reqPushPacket.Code);
+                _logger.LogWarning("Can't find any 'IPushMessageHandler' from the dict by code '{0}'! ", pushReqPacket.Code);
                 return;
             }
 
             var request = new RequestPush()
             {
-                Code = reqPushPacket.Code,
-                Body = reqPushPacket.Body
+                Code = pushReqPacket.Code,
+                Body = pushReqPacket.Body
             };
 
             var response = await handler.HandlePushAsync(request);
-            switch (reqPushPacket.PushType)
+            switch (pushReqPacket.PushType)
             {
                 case PushType.NoReply:
                 case PushType.Unknow:
@@ -401,8 +400,8 @@ namespace FluentSocket.DotNetty
                 case PushType.Reply:
                     var respPushMessagePacket = new PushRespPacket()
                     {
-                        Sequence = reqPushPacket.Sequence,
-                        PushType = reqPushPacket.PushType,
+                        Sequence = pushReqPacket.Sequence,
+                        PushType = pushReqPacket.PushType,
                         Code = response.Code,
                         Body = response.Body
                     };

@@ -62,12 +62,13 @@ namespace FluentSocket.Impl
 
         /// <summary>Remove session by sessionId
         /// </summary>
-        public void RemoveSession(string sessionId)
+        public ISocketSession RemoveSession(string sessionId)
         {
-            if (!_sessionDict.TryRemove(sessionId, out ISocketSession _))
+            if (!_sessionDict.TryRemove(sessionId, out ISocketSession session))
             {
                 _logger.LogInformation("Remove session fail,SessionId:{0}", sessionId);
             }
+            return session;
         }
 
         /// <summary>ClearSession

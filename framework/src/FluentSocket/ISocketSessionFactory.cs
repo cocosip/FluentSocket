@@ -27,7 +27,7 @@ namespace FluentSocket.Impl
 
         /// <summary>Remove session by sessionId
         /// </summary>
-        void RemoveSession(string sessionId);
+        ISocketSession RemoveSession(string sessionId);
 
         /// <summary>ClearSession
         /// </summary>

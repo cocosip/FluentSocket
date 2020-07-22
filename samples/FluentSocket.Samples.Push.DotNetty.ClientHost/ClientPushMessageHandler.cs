@@ -7,20 +7,20 @@ using System;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FluentSocket.Samples.Message.DotNetty.ServerHost
+namespace FluentSocket.Samples.Push.DotNetty.ClientHost
 {
-    public class ServerRequestMessageHandler : IRequestMessageHandler
+    public class ClientPushMessageHandler : IPushMessageHandler
     {
         private readonly IBinarySerializer _binarySerializer;
         private readonly IPerformanceService _performanceService;
 
-        public ServerRequestMessageHandler(IPerformanceService performanceService, IBinarySerializer binarySerializer)
+        public ClientPushMessageHandler(IBinarySerializer binarySerializer, IPerformanceService performanceService)
         {
-            _performanceService = performanceService;
             _binarySerializer = binarySerializer;
+            _performanceService = performanceService;
         }
 
-        public ValueTask<ResponseMessage> HandleRequestAsync(ISocketSession session, RequestMessage request)
+        public ValueTask<ResponsePush> HandlePushAsync(RequestPush request)
         {
             var timeRequestMessage = _binarySerializer.Deserialize<TimeRequestMessage>(request.Body);
 
@@ -28,17 +28,17 @@ namespace FluentSocket.Samples.Message.DotNetty.ServerHost
             {
                 CreateTime = timeRequestMessage.CreateTime,
                 HandleTime = DateTime.Now,
-                Content = Encoding.UTF8.GetBytes($"Hello client!")
+                Content = Encoding.UTF8.GetBytes($"Hello Server!")
             };
 
-            var responseMessage = new ResponseMessage()
+            var responsePush = new ResponsePush()
             {
                 Code = request.Code,
                 Body = _binarySerializer.Serialize(timeResponseMessage)
             };
 
             _performanceService.IncrementKeyCount("Async", (DateTime.Now - timeRequestMessage.CreateTime).TotalMilliseconds);
-            return new ValueTask<ResponseMessage>(responseMessage);
+            return new ValueTask<ResponsePush>(responsePush);
         }
     }
 }

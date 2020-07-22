@@ -1,5 +1,4 @@
 ﻿using FluentSocket.Protocols;
-using FluentSocket.Samples.Common;
 using FluentSocket.Samples.Common.Performance;
 using FluentSocket.Samples.Common.Serializing;
 using FluentSocket.Traffic;
@@ -7,7 +6,7 @@ using System;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FluentSocket.Samples.Push.DotNetty.ClientHost
+namespace FluentSocket.Samples.Common.Services
 {
     public class ClientPushMessageHandler : IPushMessageHandler
     {
@@ -37,7 +36,7 @@ namespace FluentSocket.Samples.Push.DotNetty.ClientHost
                 Body = _binarySerializer.Serialize(timeResponseMessage)
             };
 
-            _performanceService.IncrementKeyCount("Async", (DateTime.Now - timeRequestMessage.CreateTime).TotalMilliseconds);
+            _performanceService.IncrementKeyCount("PushHandleAsync", (DateTime.Now - timeRequestMessage.CreateTime).TotalMilliseconds);
             return new ValueTask<ResponsePush>(responsePush);
         }
     }

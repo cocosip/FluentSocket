@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace FluentSocket.Impl
+namespace FluentSocket
 {
     public class BaseSessionService : ISessionService
     {

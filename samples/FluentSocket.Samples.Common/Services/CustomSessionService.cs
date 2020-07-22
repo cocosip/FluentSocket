@@ -1,8 +1,7 @@
-﻿using FluentSocket.Impl;
-using System;
+﻿using System;
 using System.Threading.Tasks;
 
-namespace FluentSocket.Samples.Push.DotNetty.ServerHost
+namespace FluentSocket.Samples.Common.Services
 {
     public class CustomSessionService : BaseSessionService
     {

@@ -1,7 +1,9 @@
 ﻿using FluentSocket.Protocols;
 using FluentSocket.Traffic;
 using FluentSocket.Utils;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using SuperSocket;
 using SuperSocket.Client;
 using System;
 using System.Collections.Concurrent;
@@ -37,7 +39,7 @@ namespace FluentSocket.SuperSocket
 
         private bool _isConnected = false;
         //private int _reConnectAttempt = 0;
-        //private int _sequence = 1;
+        private int _sequence = 1;
 
 
 
@@ -94,6 +96,29 @@ namespace FluentSocket.SuperSocket
         }
 
 
+        public async ValueTask<ResponseMessage> SendMessageAsync(RequestMessage request, int timeoutMillis = 3000)
+        {
+            var sequence = Interlocked.Increment(ref _sequence);
+            var messageReqPacket = new MessageReqPacket()
+            {
+                Sequence = sequence,
+                Code = request.Code,
+                Body = request.Body,
+            };
+            var tcs = new TaskCompletionSource<ResponseMessage>();
+            var responseFuture = new ResponseFuture(request.Code, timeoutMillis, tcs);
+            if (!_responseFutureDict.TryAdd(sequence, responseFuture))
+            {
+                throw new Exception($"Add 'ResponseFuture' failed. Sequence:{sequence}");
+            }
+
+            //await _easyClient.SendAsync<MessageReqPacket>();
+
+            //await _clientChannel.WriteAndFlushAsync(messageReqPacket);
+            return await tcs.Task;
+        }
+
+
         public ValueTask CloseAsync()
         {
             throw new NotImplementedException();
@@ -101,11 +126,6 @@ namespace FluentSocket.SuperSocket
 
 
         public void RegisterPushHandler(short code, IPushMessageHandler handler)
-        {
-            throw new NotImplementedException();
-        }
-
-        public ValueTask<ResponseMessage> SendMessageAsync(RequestMessage request, int timeoutMillis = 3000)
         {
             throw new NotImplementedException();
         }

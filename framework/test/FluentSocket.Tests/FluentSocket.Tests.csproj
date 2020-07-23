@@ -18,10 +18,10 @@
   <ItemGroup Condition=" '$(TargetFramework)' == 'netcoreapp2.2'">
     <PackageReference Include="System.Text.Encoding.CodePages" Version="4.5.1" />
   </ItemGroup>
-  
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\FluentSocket\FluentSocket.csproj" />
+    <ProjectReference Include="..\..\src\FluentSocket.DotNetty\FluentSocket.DotNetty.csproj" />
+    <ProjectReference Include="..\..\src\FluentSocket.SuperSocket\FluentSocket.SuperSocket.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,13 +1,19 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <Import Project="..\..\..\build\common.props" />
-
+<Import Project="..\..\..\build\common.props" />
+  
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;netstandard2.1</TargetFrameworks>
     <AssemblyName>FluentSocket</AssemblyName>
     <PackageId>FluentSocket</PackageId>
-    <RootNamespace>FluentSocket</RootNamespace>
-    <Description>Easy to communication</Description>
+     <RootNamespace>FluentSocket</RootNamespace>
+    <Description>Easy to use socket</Description>
   </PropertyGroup>
   
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="3.1.6" />
+    <PackageReference Include="System.Threading.Channels" Version="4.7.1" />
+  </ItemGroup>
+ 
+
 </Project>

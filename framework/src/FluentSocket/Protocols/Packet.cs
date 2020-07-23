@@ -2,10 +2,9 @@
 {
     public abstract class Packet
     {
-        public PacketType PacketType { get; set; }
+        public virtual PacketType PacketType { get; set; }
 
-        public int Sequence { get; set; }
+        public virtual int Sequence { get; set; }
 
-        public byte[] Body { get; set; }
     }
 }

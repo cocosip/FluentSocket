@@ -54,8 +54,10 @@ namespace FluentSocket.Samples.Common.Services
             _isRunning = true;
             for (int i = 0; i < _option.PushThread; i++)
             {
-                PushTask();
+                // PushTask();
+                PushMultipleTask();
             }
+            //PushMultipleTask();
         }
 
 
@@ -89,6 +91,7 @@ namespace FluentSocket.Samples.Common.Services
                 }
             };
             _performanceService.Initialize(_performanceKey, performanceServiceSetting);
+
         }
 
 
@@ -123,6 +126,51 @@ namespace FluentSocket.Samples.Common.Services
                             Code = 101,
                             Body = _binarySerializer.Serialize(message)
                         }, _socketSession.SessionId);
+
+                        _performanceService.IncrementKeyCount(_performanceKey, (DateTime.Now - message.CreateTime).TotalMilliseconds);
+                        Interlocked.Increment(ref _sendCount);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Send message caught exception,{0}", ex.Message);
+                    }
+
+                }
+            }, TaskCreationOptions.LongRunning);
+        }
+
+        private void PushMultipleTask()
+        {
+            Task.Factory.StartNew(async () =>
+            {
+                while (!_cts.Token.IsCancellationRequested)
+                {
+                    if (_sendCount >= _option.Total)
+                    {
+                        await Task.Delay(2000);
+                        continue;
+                    }
+
+                    if (!_isClientConnected)
+                    {
+                        await Task.Delay(2000);
+                        continue;
+                    }
+
+
+                    try
+                    {
+                        var message = new TimeRequestMessage()
+                        {
+                            CreateTime = DateTime.Now,
+                            Content = Encoding.UTF8.GetBytes($"{DateTime.Now:yyyy-MM-dd HH:mm:ss fff}")
+                        };
+
+                        await _server.PushMultipleAsync(new RequestPush()
+                        {
+                            Code = 102,
+                            Body = _binarySerializer.Serialize(message)
+                        }, c => true);
 
                         _performanceService.IncrementKeyCount(_performanceKey, (DateTime.Now - message.CreateTime).TotalMilliseconds);
                         Interlocked.Increment(ref _sendCount);

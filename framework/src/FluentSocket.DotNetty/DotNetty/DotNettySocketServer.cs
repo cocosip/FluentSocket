@@ -179,6 +179,42 @@ namespace FluentSocket.DotNetty
             return await tcs.Task;
         }
 
+        /// <summary>Push message async to multiple client
+        /// </summary>
+        public async ValueTask PushMultipleAsync(RequestPush request, Func<ISocketSession, bool> predicate)
+        {
+            if (_boundChannel == null)
+            {
+                throw new ArgumentNullException("Socket server should run first!");
+            }
+
+            var sessions = _sessionFactory.GetSessions(predicate);
+            if (!sessions.Any())
+            {
+                throw new ArgumentException("Can't find any session!");
+            }
+
+            foreach (var session in sessions)
+            {
+                if (_channelDict.TryGetValue(session.SessionId, out IChannel channel))
+                {
+                    var sequence = Interlocked.Increment(ref _sequence);
+                    var pushReqPacket = new PushReqPacket()
+                    {
+                        Sequence = sequence,
+                        PushType = PushType.NoReply,
+                        Code = request.Code,
+                        Body = request.Body,
+                    };
+                    await channel.WriteAndFlushAsync(pushReqPacket);
+                }
+                else
+                {
+                    _logger.LogError("Can't find channel by session id:{0}", session.SessionId);
+                }
+            }
+        }
+
         /// <summary>Server close
         /// </summary>
         public async ValueTask CloseAsync()

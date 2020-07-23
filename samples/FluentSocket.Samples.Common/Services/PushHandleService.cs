@@ -61,6 +61,7 @@ namespace FluentSocket.Samples.Common.Services
             _client = _fluentSocketFactory.CreateClient(_option.Setting);
             var handler = _serviceProvider.CreateInstance<ClientPushMessageHandler>();
             _client.RegisterPushHandler(101, handler);
+            _client.RegisterPushHandler(102, handler);
 
             var performanceServiceSetting = new PerformanceServiceSetting
             {

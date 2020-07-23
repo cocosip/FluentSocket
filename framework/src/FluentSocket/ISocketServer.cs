@@ -25,6 +25,10 @@ namespace FluentSocket
         /// </summary>
         ValueTask<ResponsePush> PushAsync(RequestPush request, string sessionId, int timeoutMillis = 5000);
 
+        /// <summary>Push message async to multiple client
+        /// </summary>
+        ValueTask PushMultipleAsync(RequestPush request, Func<ISocketSession, bool> predicate);
+
         /// <summary>Server close
         /// </summary>
         ValueTask CloseAsync();

@@ -11,9 +11,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{543058FE-4
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FluentSocket.Tests", "test\FluentSocket.Tests\FluentSocket.Tests.csproj", "{3952FCA7-AEC6-442D-A40B-024553D21EAB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FluentSocket.DotNetty", "src\FluentSocket.DotNetty\FluentSocket.DotNetty.csproj", "{7B667659-7BDE-424C-B6FD-10AF01CEAE74}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FluentSocket.DotNetty", "src\FluentSocket.DotNetty\FluentSocket.DotNetty.csproj", "{7B667659-7BDE-424C-B6FD-10AF01CEAE74}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FluentSocket.SuperSocket", "src\FluentSocket.SuperSocket\FluentSocket.SuperSocket.csproj", "{072CD8B8-30B8-4CA8-8C1B-3931DC0DDB8B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FluentSocket.SuperSocket", "src\FluentSocket.SuperSocket\FluentSocket.SuperSocket.csproj", "{072CD8B8-30B8-4CA8-8C1B-3931DC0DDB8B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

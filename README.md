@@ -10,6 +10,7 @@
 | Package  | Version | Downloads|
 | -------- | ------- | -------- |
 | `FluentSocket` | [![NuGet](https://img.shields.io/nuget/v/FluentSocket.svg)](https://www.nuget.org/packages/FluentSocket) |![NuGet](https://img.shields.io/nuget/dt/FluentSocket.svg)|
+| `FluentSocket.DotNetty` | [![NuGet](https://img.shields.io/nuget/v/FluentSocket.DotNetty.svg)](https://www.nuget.org/packages/FluentSocket.DotNetty) |![NuGet](https://img.shields.io/nuget/dt/FluentSocket.DotNetty.svg)|
 
 ## Features
 
